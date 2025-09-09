@@ -5,15 +5,8 @@ import { useApp } from "@/context/AppContext"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Search, RotateCcw, ChevronDown } from "lucide-react"
+import { Globe, RotateCcw, MapPin, Volume2, Star } from "lucide-react"
 import { useState } from "react"
 
 export default function Home() {
@@ -29,19 +22,6 @@ export default function Home() {
     setUserProfile((prev) => ({ ...prev, language: lang }))
   }
 
-  // 언어 목록과 국기
-  const languages = [
-    { code: "ko", name: "한국어", flag: "🇰🇷" },
-    { code: "ja", name: "日本語", flag: "🇯🇵" },
-    { code: "en", name: "English", flag: "🇺🇸" },
-    { code: "zh", name: "中文", flag: "🇨🇳" },
-    { code: "es", name: "Español", flag: "🇪🇸" },
-    { code: "fr", name: "Français", flag: "🇫🇷" },
-  ]
-
-  // 현재 선택된 언어 정보
-  const currentLanguage = languages.find(lang => lang.code === userProfile.language) || languages[0]
-
   // 검색 필터링된 문화유적지
   const filteredSites = culturalSites.filter(site => 
     site.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -53,47 +33,21 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-background korean-pattern pb-16">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-card dancheong-accent">
-        <div className="flex items-center gap-3">
-          <Avatar className="w-12 h-12 bg-primary shadow-lg">
-            <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">한</AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="font-bold text-xl text-primary">한국문화 AI 가이드</h1>
-            <p className="text-sm text-muted-foreground">전통과 현대가 만나는 문화 여행</p>
-          </div>
+        <div>
+          <h1 className="font-bold text-xl text-primary">한국문화 AI 가이드</h1>
+          <p className="text-sm text-muted-foreground">전통과 현대가 만나는 문화 여행</p>
         </div>
 
         <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-primary/20 gap-2"
-              >
-                <span className="text-base">{currentLanguage.flag}</span>
-                <span className="text-sm">{currentLanguage.name}</span>
-                <ChevronDown className="w-3 h-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              {languages.map((language) => (
-                <DropdownMenuItem
-                  key={language.code}
-                  onClick={() => handleLanguageChange(language.code)}
-                  className={`flex items-center gap-3 py-2 ${
-                    language.code === userProfile.language ? "bg-primary/10" : ""
-                  }`}
-                >
-                  <span className="text-base">{language.flag}</span>
-                  <span className="text-sm">{language.name}</span>
-                  {language.code === userProfile.language && (
-                    <span className="ml-auto text-primary text-xs">✓</span>
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleLanguageChange(userProfile.language === "ko" ? "en" : "ko")}
+            className="border-primary/20"
+          >
+            <Globe className="w-4 h-4" />
+            {userProfile.language === "ko" ? "EN" : "한"}
+          </Button>
         </div>
       </div>
 
@@ -101,22 +55,14 @@ export default function Home() {
       <div className="flex-1">
         <div className="p-4 pb-2">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                <Search className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <div className="relative">
-                  <Input
-                    type="text"
-                    placeholder="문화유적지를 검색하세요..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-4 pr-10 py-2 border-primary/20 focus:border-primary"
-                  />
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                </div>
-              </div>
+            <div className="flex-1">
+              <Input
+                type="text"
+                placeholder="문화유적지를 검색하세요..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-4 pr-4 py-2 border-primary/20 focus:border-primary"
+              />
             </div>
             <Button
               variant="ghost"
@@ -137,9 +83,6 @@ export default function Home() {
           <div className="space-y-4">
             {filteredSites.length === 0 && searchQuery ? (
               <div className="text-center py-8">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🔍</span>
-                </div>
                 <h3 className="font-medium text-lg text-primary mb-2">검색 결과가 없습니다</h3>
                 <p className="text-sm text-muted-foreground">다른 키워드로 검색해보세요</p>
               </div>
@@ -165,10 +108,12 @@ export default function Home() {
                   <div className="flex items-start justify-end mb-4">
                     <div className="flex flex-col items-end gap-2">
                       <Badge variant="secondary" className="bg-white/90 text-gray-800 shadow-lg backdrop-blur-sm">
+                        <Volume2 className="w-3 h-3 mr-1" />
                         AI 나레이션
                       </Badge>
                       <div className="flex items-center gap-1 bg-white/90 rounded-full px-2 py-1 backdrop-blur-sm">
-                        <span className="text-xs font-medium text-gray-800">★ 4.8</span>
+                        <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                        <span className="text-xs font-medium text-gray-800">4.8</span>
                       </div>
                     </div>
                   </div>
@@ -180,6 +125,7 @@ export default function Home() {
 
                     <div className="flex items-center gap-4 text-xs">
                       <div className="flex items-center gap-1 text-white/80">
+                        <MapPin className="w-3 h-3" />
                         <span className="font-medium">{site.distance}km</span>
                       </div>
                       <Badge variant="outline" className="border-white/50 text-white/90 bg-white/10 backdrop-blur-sm">

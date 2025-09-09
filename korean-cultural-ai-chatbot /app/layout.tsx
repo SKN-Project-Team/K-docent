@@ -2,14 +2,14 @@ import type React from "react"
 import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
-import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "./globals.css"
+import { AppProvider } from "@/context/AppContext"
+import MobileNavigation from "@/components/Layout/MobileNavigation"
 
 export const metadata: Metadata = {
-  title: "경복궁 AI 톡허브 - Korean Cultural AI Chatbot",
-  description: "Location-based Korean cultural narration AI chatbot for heritage sites",
-  generator: "v0.app",
+  title: "한국문화 AI 가이드",
+  description: "전통과 현대가 만나는 문화 여행",
 }
 
 export default function RootLayout({
@@ -19,9 +19,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
+      <head></head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={null}>{children}</Suspense>
-        <Analytics />
+        <AppProvider>
+          <Suspense fallback={null}>{children}</Suspense>
+          <div className="fixed bottom-0 left-0 right-0 z-50">
+            <MobileNavigation />
+          </div>
+        </AppProvider>
       </body>
     </html>
   )
