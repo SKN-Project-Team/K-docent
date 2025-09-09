@@ -3,10 +3,13 @@
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Navigation, Map } from "lucide-react"
+import { useApp } from "@/context/AppContext"
+import { getTranslatedText, uiTexts } from "@/utils/translation"
 
 export default function MobileNavigation() {
   const pathname = usePathname()
   const router = useRouter()
+  const { userProfile } = useApp()
 
   // 채팅 페이지나 상세 페이지에서는 네비게이션 숨기기
   if (pathname?.includes('/chat') || pathname?.includes('/detail')) {
@@ -23,7 +26,7 @@ export default function MobileNavigation() {
         onClick={() => router.push("/")}
       >
         <Navigation className="w-5 h-5" />
-        <span className="text-xs">리스트</span>
+        <span className="text-xs">{getTranslatedText(uiTexts.list, userProfile.language)}</span>
       </Button>
       <Button
         variant={pathname === "/map" ? "default" : "ghost"}
@@ -33,7 +36,7 @@ export default function MobileNavigation() {
         onClick={() => router.push("/map")}
       >
         <Map className="w-5 h-5" />
-        <span className="text-xs">지도</span>
+        <span className="text-xs">{getTranslatedText(uiTexts.map, userProfile.language)}</span>
       </Button>
     </div>
   )

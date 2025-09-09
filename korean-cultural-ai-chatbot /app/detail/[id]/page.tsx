@@ -3,6 +3,7 @@
 import { useApp } from "@/context/AppContext"
 import DetailScreen from "@/components/DetailScreen"
 import { useRouter } from "next/navigation"
+import { getTranslatedText } from "@/utils/translation"
 
 interface DetailPageProps {
   params: { id: string }
@@ -10,10 +11,12 @@ interface DetailPageProps {
 
 export default function DetailPage({ params }: DetailPageProps) {
   const router = useRouter()
-  const { culturalSites, setCurrentLocation } = useApp()
+  const { culturalSites, setCurrentLocation, userProfile } = useApp()
 
-  // URL의 id와 매칭되는 문화재 찾기
-  const location = culturalSites.find(site => site.name === decodeURIComponent(params.id))
+  // URL의 id와 매칭되는 문화재 찾기 (다국어 지원)
+  const location = culturalSites.find(site => 
+    getTranslatedText(site.name, userProfile.language) === decodeURIComponent(params.id)
+  )
 
   if (!location) {
     return (
@@ -37,6 +40,7 @@ export default function DetailPage({ params }: DetailPageProps) {
       location={location}
       onBackToList={handleBackToList}
       onChatOpen={handleChatOpen}
+      userLanguage={userProfile.language} 
     />
   )
 }

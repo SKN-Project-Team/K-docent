@@ -7,17 +7,20 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ArrowLeft, MessageCircle, MapPin, Play, Pause, Volume2 } from "lucide-react"
 import { LocationData } from "@/types"
+import { getTranslatedText, uiTexts } from "@/utils/translation"
 
 interface DetailScreenProps {
   location: LocationData
   onBackToList: () => void
   onChatOpen: () => void
+  userLanguage: string
 }
 
 export default function DetailScreen({
   location,
   onBackToList,
-  onChatOpen
+  onChatOpen,
+  userLanguage
 }: DetailScreenProps) {
   const [isPlaying, setIsPlaying] = useState<string | null>(null)
 
@@ -52,8 +55,8 @@ export default function DetailScreen({
             />
           )}
           <div>
-            <h1 className="font-bold text-xl text-primary">{location.name}</h1>
-            <p className="text-sm text-muted-foreground">{location.category} • {location.distance}km</p>
+            <h1 className="font-bold text-xl text-primary">{getTranslatedText(location.name, userLanguage)}</h1>
+            <p className="text-sm text-muted-foreground">{getTranslatedText(location.category, userLanguage)} • {location.distance}km</p>
           </div>
         </div>
         
@@ -63,14 +66,14 @@ export default function DetailScreen({
           className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
         >
           <MessageCircle className="w-4 h-4 mr-2" />
-          채팅
+          {getTranslatedText(uiTexts.chatButton, userLanguage)}
         </Button>
       </div>
 
       {/* 장소 소개 */}
       <div className="p-4 bg-muted/30 border-b">
         <p className="text-sm text-muted-foreground leading-relaxed">
-          {location.description}
+          {getTranslatedText(location.description, userLanguage)}
         </p>
       </div>
 
@@ -103,9 +106,9 @@ export default function DetailScreen({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h3 className="font-bold text-lg text-primary mb-1">{place.name}</h3>
+                        <h3 className="font-bold text-lg text-primary mb-1">{getTranslatedText(place.name, userLanguage)}</h3>
                         <Badge variant="outline" className="text-xs border-primary/20 text-primary mb-2">
-                          {place.category}
+                          {getTranslatedText(place.category, userLanguage)}
                         </Badge>
                       </div>
                       <Button
@@ -128,7 +131,7 @@ export default function DetailScreen({
                     </div>
 
                     <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                      {place.description}
+                      {getTranslatedText(place.description, userLanguage)}
                     </p>
 
                     {/* 하이라이트 */}
@@ -139,7 +142,7 @@ export default function DetailScreen({
                           variant="secondary"
                           className="text-xs bg-secondary/60 text-secondary-foreground"
                         >
-                          {highlight}
+                          {getTranslatedText(highlight, userLanguage)}
                         </Badge>
                       ))}
                     </div>

@@ -3,6 +3,7 @@
 import { useApp } from "@/context/AppContext"
 import ChatScreen from "@/components/ChatScreen"
 import { useRouter } from "next/navigation"
+import { getTranslatedText } from "@/utils/translation"
 
 export default function ChatPage() {
   const router = useRouter()
@@ -10,7 +11,8 @@ export default function ChatPage() {
 
   const handleBackToDetail = () => {
     if (currentLocation) {
-      router.push(`/detail/${currentLocation.name}`)
+      const locationName = getTranslatedText(currentLocation.name, userProfile.language)
+      router.push(`/detail/${encodeURIComponent(locationName)}`)
     } else {
       router.push("/")
     }

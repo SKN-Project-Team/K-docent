@@ -7,26 +7,35 @@ export interface Message {
   sources?: string[]
 }
 
+export interface MultilingualText {
+  ko: string
+  ja: string
+  en: string
+  zh: string
+  es: string
+  fr: string
+}
+
 export interface LocationData {
-  name: string
-  description: string
+  name: MultilingualText
+  description: MultilingualText
   coordinates: { lat: number; lng: number }
   distance?: number
   hasNarration: boolean
-  category: string
+  category: MultilingualText
   color?: string
   illustration?: string
-  buttonText?: string
+  buttonText?: MultilingualText
   backgroundImage?: string
   detailPlaces?: DetailPlace[]
 }
 
 export interface DetailPlace {
   id: string
-  name: string
-  description: string
-  category: string
+  name: MultilingualText
+  description: MultilingualText
+  category: MultilingualText
   image?: string
   narrationDuration?: string
-  highlights: string[]
+  highlights: MultilingualText[]
 }

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Search, RotateCcw, ChevronDown } from "lucide-react"
 import { useState } from "react"
+import { getTranslatedText, uiTexts } from "@/utils/translation"
 
 export default function Home() {
   const router = useRouter()
@@ -44,9 +45,9 @@ export default function Home() {
 
   // 검색 필터링된 문화유적지
   const filteredSites = culturalSites.filter(site => 
-    site.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    site.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    site.category.toLowerCase().includes(searchQuery.toLowerCase())
+    getTranslatedText(site.name, userProfile.language).toLowerCase().includes(searchQuery.toLowerCase()) ||
+    getTranslatedText(site.description, userProfile.language).toLowerCase().includes(searchQuery.toLowerCase()) ||
+    getTranslatedText(site.category, userProfile.language).toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   return (
@@ -55,33 +56,32 @@ export default function Home() {
       <div className="flex items-center justify-between p-4 border-b bg-card dancheong-accent">
         <div className="flex items-center gap-3">
           <Avatar className="w-12 h-12 bg-primary shadow-lg">
-            <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">한</AvatarFallback>
+            <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">{getTranslatedText(uiTexts.avatarLetter, userProfile.language)}</AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="font-bold text-xl text-primary">한국문화 AI 가이드</h1>
-            <p className="text-sm text-muted-foreground">전통과 현대가 만나는 문화 여행</p>
+            <h1 className="font-bold text-xl text-primary">{getTranslatedText(uiTexts.appTitle, userProfile.language)}</h1>
+            <p className="text-sm text-muted-foreground">{getTranslatedText(uiTexts.appSubtitle, userProfile.language)}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-primary/20 gap-2"
-              >
-                <span className="text-base">{currentLanguage.flag}</span>
-                <span className="text-sm">{currentLanguage.name}</span>
-                <ChevronDown className="w-3 h-3" />
-              </Button>
+            <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md border border-primary/20 bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 touch-manipulation">
+              <span className="text-base">{currentLanguage.flag}</span>
+              <span className="text-sm">{currentLanguage.name}</span>
+              <ChevronDown className="w-3 h-3" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent 
+              align="end" 
+              className="w-40 z-50"
+              side="bottom"
+              sideOffset={4}
+            >
               {languages.map((language) => (
                 <DropdownMenuItem
                   key={language.code}
-                  onClick={() => handleLanguageChange(language.code)}
-                  className={`flex items-center gap-3 py-2 ${
+                  onSelect={() => handleLanguageChange(language.code)}
+                  className={`flex items-center gap-3 py-3 px-3 cursor-pointer touch-manipulation ${
                     language.code === userProfile.language ? "bg-primary/10" : ""
                   }`}
                 >
@@ -109,7 +109,7 @@ export default function Home() {
                 <div className="relative">
                   <Input
                     type="text"
-                    placeholder="문화유적지를 검색하세요..."
+                    placeholder={getTranslatedText(uiTexts.searchPlaceholder, userProfile.language)}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-4 pr-10 py-2 border-primary/20 focus:border-primary"
@@ -126,7 +126,7 @@ export default function Home() {
                 console.log('Refreshing cultural sites...')
                 setSearchQuery("") // 검색어도 초기화
               }}
-              title="주변 문화유적지 새로고침"
+              title={getTranslatedText(uiTexts.refreshTitle, userProfile.language)}
             >
               <RotateCcw className="w-5 h-5" />
             </Button>
@@ -140,15 +140,15 @@ export default function Home() {
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">🔍</span>
                 </div>
-                <h3 className="font-medium text-lg text-primary mb-2">검색 결과가 없습니다</h3>
-                <p className="text-sm text-muted-foreground">다른 키워드로 검색해보세요</p>
+                <h3 className="font-medium text-lg text-primary mb-2">{getTranslatedText(uiTexts.noResultsTitle, userProfile.language)}</h3>
+                <p className="text-sm text-muted-foreground">{getTranslatedText(uiTexts.noResultsDescription, userProfile.language)}</p>
               </div>
             ) : (
               filteredSites.map((site, idx) => (
               <Card
                 key={idx}
                 className={`relative overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-primary/30 w-full group`}
-                onClick={() => handleLocationSelect(site.name)}
+                onClick={() => handleLocationSelect(getTranslatedText(site.name, userProfile.language))}
                 style={{
                   backgroundImage: site.backgroundImage ? `url(${site.backgroundImage})` : 'none',
                   backgroundSize: 'cover',
@@ -165,7 +165,7 @@ export default function Home() {
                   <div className="flex items-start justify-end mb-4">
                     <div className="flex flex-col items-end gap-2">
                       <Badge variant="secondary" className="bg-white/90 text-gray-800 shadow-lg backdrop-blur-sm">
-                        AI 나레이션
+                        {getTranslatedText(uiTexts.aiNarration, userProfile.language)}
                       </Badge>
                       <div className="flex items-center gap-1 bg-white/90 rounded-full px-2 py-1 backdrop-blur-sm">
                         <span className="text-xs font-medium text-gray-800">★ 4.8</span>
@@ -175,15 +175,15 @@ export default function Home() {
 
                   {/* Content */}
                   <div className="mb-6">
-                    <h3 className="font-bold text-2xl mb-3 drop-shadow-lg filter">{site.name}</h3>
-                    <p className="text-sm leading-relaxed mb-4 line-clamp-3 text-white/90 drop-shadow-sm">{site.description}</p>
+                    <h3 className="font-bold text-2xl mb-3 drop-shadow-lg filter">{getTranslatedText(site.name, userProfile.language)}</h3>
+                    <p className="text-sm leading-relaxed mb-4 line-clamp-3 text-white/90 drop-shadow-sm">{getTranslatedText(site.description, userProfile.language)}</p>
 
                     <div className="flex items-center gap-4 text-xs">
                       <div className="flex items-center gap-1 text-white/80">
                         <span className="font-medium">{site.distance}km</span>
                       </div>
                       <Badge variant="outline" className="border-white/50 text-white/90 bg-white/10 backdrop-blur-sm">
-                        {site.category}
+                        {getTranslatedText(site.category, userProfile.language)}
                       </Badge>
                     </div>
                   </div>
@@ -194,10 +194,10 @@ export default function Home() {
                       className="w-full bg-white/20 hover:bg-white/30 text-white font-medium py-4 rounded-xl shadow-lg transition-all duration-200 text-base backdrop-blur-sm border border-white/30 hover:border-white/50"
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleLocationSelect(site.name)
+                        handleLocationSelect(getTranslatedText(site.name, userProfile.language))
                       }}
                     >
-                      {site.buttonText || "지금 둘러볼게요"}
+                      {getTranslatedText(site.buttonText!, userProfile.language)}
                     </Button>
                   </div>
                 </div>

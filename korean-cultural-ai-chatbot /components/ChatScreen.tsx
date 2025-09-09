@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ArrowLeft, Send, Mic, Globe, Users, Clock, Volume2, MapPin } from "lucide-react"
 import { LocationData, Message } from "@/types"
+import { getTranslatedText, uiTexts, questionTemplates } from "@/utils/translation"
 
 interface ChatScreenProps {
   location: LocationData | null
@@ -50,14 +51,14 @@ export default function ChatScreen({
   const getSuggestedQuestions = () => {
     if (!location) return []
     
-    const locationName = location.name
+    const locationName = getTranslatedText(location.name, userProfile.language)
     return [
-      `${locationName}은 언제 지어졌고 어떤 의미를 가지나요?`,
-      `${locationName}의 특별한 건축적 특징은 무엇인가요?`,
-      `${locationName}에서 가장 중요한 장소는 어디인가요?`,
-      `${locationName}과 관련된 역사적 인물은 누구인가요?`,
-      `${locationName}에서만 볼 수 있는 독특한 것이 있나요?`,
-      `${locationName}을 방문할 때 꼭 봐야 할 포인트는요?`,
+      `${locationName}${getTranslatedText(questionTemplates.whenBuilt, userProfile.language)}`,
+      `${locationName}${getTranslatedText(questionTemplates.architecture, userProfile.language)}`,
+      `${locationName}${getTranslatedText(questionTemplates.importantPlace, userProfile.language)}`,
+      `${locationName}${getTranslatedText(questionTemplates.historicalFigures, userProfile.language)}`,
+      `${locationName}${getTranslatedText(questionTemplates.unique, userProfile.language)}`,
+      `${locationName}${getTranslatedText(questionTemplates.visitPoints, userProfile.language)}`,
     ]
   }
 
@@ -69,7 +70,7 @@ export default function ChatScreen({
       type: "user",
       content: inputMessage.trim(),
       timestamp: new Date(),
-      location: location.name
+      location: getTranslatedText(location.name, userProfile.language)
     }
 
     setMessages([...messages, userMessage])
@@ -80,10 +81,10 @@ export default function ChatScreen({
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "ai",
-        content: `${location.name}에 대한 질문 "${inputMessage.trim()}"에 대해 답변드리겠습니다. 이곳은 한국의 중요한 문화유산으로서 많은 역사와 의미를 담고 있습니다.`,
+        content: `${getTranslatedText(location.name, userProfile.language)}에 대한 질문 "${inputMessage.trim()}"에 대해 답변드리겠습니다. 이곳은 한국의 중요한 문화유산으로서 많은 역사와 의미를 담고 있습니다.`,
         timestamp: new Date(),
-        location: location.name,
-        sources: ["문화재청", "한국관광공사", location.category]
+        location: getTranslatedText(location.name, userProfile.language),
+        sources: ["문화재청", "한국관광공사", getTranslatedText(location.category, userProfile.language)]
       }
       setMessages(prev => [...prev, aiMessage])
     }, 1000)
@@ -110,16 +111,27 @@ export default function ChatScreen({
           >
             <ArrowLeft className="w-4 h-4 text-primary" />
           </Button>
-          <Avatar className="w-12 h-12 bg-primary shadow-lg">
-            <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">
-              {location?.illustration || '🏛️'}
-            </AvatarFallback>
-          </Avatar>
+          {location?.backgroundImage ? (
+            <div 
+              className="w-12 h-12 rounded-full shadow-lg overflow-hidden"
+              style={{
+                backgroundImage: `url(${location.backgroundImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}
+            />
+          ) : (
+            <Avatar className="w-12 h-12 bg-primary shadow-lg">
+              <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">
+                🏛️
+              </AvatarFallback>
+            </Avatar>
+          )}
           <div>
-            <h1 className="font-bold text-lg text-primary">{location?.name} AI 가이드</h1>
+            <h1 className="font-bold text-lg text-primary">{location ? getTranslatedText(location.name, userProfile.language) : ''} {getTranslatedText(uiTexts.aiGuide, userProfile.language)}</h1>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="w-3 h-3" />
-              <span>{location?.category} • {location?.distance}km</span>
+              <span>{location ? getTranslatedText(location.category, userProfile.language) : ''} • {location?.distance}km</span>
             </div>
           </div>
         </div>
@@ -132,11 +144,11 @@ export default function ChatScreen({
             <span className="text-xs">{location?.illustration}</span>
           </div>
           <span className="text-sm font-medium text-primary">
-            {location?.name}에 대해 궁금한 모든 것을 물어보세요
+            {getTranslatedText(uiTexts.askEverything, userProfile.language)} {location ? getTranslatedText(location.name, userProfile.language) : ''}
           </span>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          {location?.description}
+          {location ? getTranslatedText(location.description, userProfile.language) : ''}
         </p>
       </div>
 
@@ -145,13 +157,13 @@ export default function ChatScreen({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">설명 수준</span>
+            <span className="text-sm font-medium text-primary">{getTranslatedText(uiTexts.levelLabel, userProfile.language)}</span>
           </div>
           <div className="flex gap-2">
             {[
-              { key: "expert", label: "전문가", icon: "🎓" },
-              { key: "adult", label: "성인", icon: "👤" },
-              { key: "children", label: "어린이", icon: "🧒" },
+              { key: "expert", label: getTranslatedText(uiTexts.expert, userProfile.language), icon: "🎓" },
+              { key: "adult", label: getTranslatedText(uiTexts.adult, userProfile.language), icon: "👤" },
+              { key: "children", label: getTranslatedText(uiTexts.children, userProfile.language), icon: "🧒" },
             ].map((level) => (
               <Button
                 key={level.key}
@@ -180,7 +192,7 @@ export default function ChatScreen({
                   <Avatar className="w-7 h-7 bg-primary shadow-md">
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">AI</AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-medium text-primary">전통문화 AI 해설사</span>
+                  <span className="text-xs font-medium text-primary">{getTranslatedText(uiTexts.culturalGuide, userProfile.language)}</span>
                   {message.location && (
                     <Badge variant="secondary" className="text-xs bg-secondary text-secondary-foreground">
                       <MapPin className="w-3 h-3 mr-1" />
@@ -202,7 +214,7 @@ export default function ChatScreen({
                 {message.sources && (
                   <div className="mt-3 pt-3 border-t border-border/30">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                      <span className="font-medium">참고 자료:</span>
+                      <span className="font-medium">{getTranslatedText(uiTexts.references, userProfile.language)}</span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {message.sources.map((source, idx) => (
@@ -238,7 +250,7 @@ export default function ChatScreen({
       <div className="p-4 border-t bg-muted/20 cloud-pattern">
         <div className="flex items-center gap-2 mb-3">
           <Clock className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-primary">{location?.name} 추천 질문</span>
+          <span className="text-sm font-semibold text-primary">{location ? getTranslatedText(location.name, userProfile.language) : ''} {getTranslatedText(uiTexts.recommendedQuestions, userProfile.language)}</span>
         </div>
         <div className="flex gap-2 overflow-x-auto pb-2">
           {getSuggestedQuestions().slice(0, 3).map((question, idx) => (
@@ -262,7 +274,7 @@ export default function ChatScreen({
             <Input
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder={`${location?.name}의 역사, 문화, 특징에 대해 궁금한 것을 물어보세요...`}
+              placeholder={`${location ? getTranslatedText(location.name, userProfile.language) : ''}${getTranslatedText(uiTexts.chatPlaceholder, userProfile.language)}`}
               onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
               className="pr-12 border-primary/20 focus:border-primary/40 bg-background/90"
             />
