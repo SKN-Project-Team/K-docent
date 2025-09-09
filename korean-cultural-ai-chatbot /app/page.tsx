@@ -55,9 +55,6 @@ export default function Home() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-card dancheong-accent">
         <div className="flex items-center gap-3">
-          <Avatar className="w-12 h-12 bg-primary shadow-lg">
-            <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">{getTranslatedText(uiTexts.avatarLetter, userProfile.language)}</AvatarFallback>
-          </Avatar>
           <div>
             <h1 className="font-bold text-xl text-primary">{getTranslatedText(uiTexts.appTitle, userProfile.language)}</h1>
             <p className="text-sm text-muted-foreground">{getTranslatedText(uiTexts.appSubtitle, userProfile.language)}</p>
