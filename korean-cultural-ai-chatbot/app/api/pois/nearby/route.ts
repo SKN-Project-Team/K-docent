@@ -1,143 +1,137 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-interface TourApiItem {
-  contentid?: string;
+type TourApiItem = {
+  contentid: string;
   contenttypeid?: string;
-  title?: string;
+  title: string;
+  addr1?: string;
   firstimage?: string;
   firstimage2?: string;
-  mapx?: string;
-  mapy?: string;
-  addr1?: string;
-  addr2?: string;
-  dist?: string;
+  mapx: string; // lng
+  mapy: string; // lat
+  dist?: string; // meters as string
+};
+
+type PoiItem = {
+  id: string;
+  title: string;
+  lat: number;
+  lng: number;
+  address: string;
+  distance: number; // meters
+  image: string | null;
+  contentTypeId: string | null;
+};
+
+function toNumber(n: unknown) {
+  const x = typeof n === 'string' ? parseFloat(n) : NaN;
+  return Number.isFinite(x) ? x : NaN;
 }
 
-const DEFAULT_RADIUS = 1000; // meters
-
-const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371000; // Earth radius in meters
-  const toRad = (value: number) => (value * Math.PI) / 180;
-
+// Haversine (meter)
+function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c);
-};
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const lat = searchParams.get('lat');
-  const lng = searchParams.get('lng');
-  const radius = searchParams.get('radius');
-  const types = searchParams.get('types');
-
-  if (!lat || !lng) {
-    return NextResponse.json(
-      { message: 'lat과 lng 파라미터가 필요합니다.' },
-      { status: 400 }
-    );
-  }
-
-  const serviceKey = process.env.KTO_TOUR_API_KEY;
-
-  if (!serviceKey) {
-    console.error('KTO_TOUR_API_KEY 환경 변수가 설정되어 있지 않습니다.');
-    return NextResponse.json(
-      { message: 'TourAPI 서비스 키가 설정되지 않았습니다.' },
-      { status: 500 }
-    );
-  }
-
+export async function GET(req: NextRequest) {
   try {
-    const serviceKeyParam = serviceKey.includes('%')
-      ? decodeURIComponent(serviceKey)
-      : serviceKey;
+    const { searchParams } = new URL(req.url);
+    const lat = parseFloat(searchParams.get('lat') || '');
+    const lng = parseFloat(searchParams.get('lng') || '');
+    const radius = Math.max(100, Math.min(20000, parseInt(searchParams.get('radius') || '1000', 10)));
+    const contentTypeId = searchParams.get('contentTypeId') || ''; // 옵션
 
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return new NextResponse('lat/lng required', { status: 400 });
+    }
+
+    const serviceKey = process.env.TOURAPI_SERVICE_KEY;
+    if (!serviceKey) {
+      return new NextResponse('TOURAPI_SERVICE_KEY not set', { status: 500 });
+    }
+
+    // 서비스 키를 직접 URL에 포함 (이중 인코딩 방지)
+    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/locationBasedList2';
     const params = new URLSearchParams({
-      serviceKey: serviceKeyParam,
-      numOfRows: '100',
-      pageNo: '1',
       MobileOS: 'ETC',
       MobileApp: 'K-Docent',
       _type: 'json',
-      mapX: lng,
-      mapY: lat,
-      radius: radius ?? String(DEFAULT_RADIUS)
+      mapX: String(lng),       // 경도
+      mapY: String(lat),       // 위도
+      radius: String(radius),  // 미터
+      // listYN: 'Y',
+      arrange: 'C',            // 수정일 최신순 (거리값은 응답에 포함됨)
+      numOfRows: '100',
+      pageNo: '1'
     });
+    if (contentTypeId) params.set('contentTypeId', contentTypeId);
 
-    if (types) {
-      const [contentTypeId] = types.split(',');
-      if (contentTypeId) {
-        params.set('contentTypeId', contentTypeId);
-      }
+    const url = `${baseUrl}?serviceKey=${serviceKey}&${params.toString()}`;
+    console.log('TourAPI 요청 URL:', url);
+    
+    const res = await fetch(url, { next: { revalidate: 60 } });
+    
+    const responseText = await res.text();
+    console.log('TourAPI 응답 상태:', res.status);
+    console.log('TourAPI 응답 헤더:', Object.fromEntries(res.headers.entries()));
+    console.log('TourAPI 응답 내용 (처음 500자):', responseText.substring(0, 500));
+    
+    if (!res.ok) {
+      return new NextResponse(`TourAPI error (${res.status}): ${responseText}`, { status: 502 });
     }
 
-    const endpoint = `https://apis.data.go.kr/B551011/KorService1/locationBasedList1?${params.toString()}`;
-    const response = await fetch(endpoint, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      console.error('TourAPI 요청 실패', response.status, await response.text());
-      return NextResponse.json(
-        { message: 'TourAPI 요청 중 오류가 발생했습니다.' },
-        { status: 502 }
-      );
+    // JSON 파싱 시도
+    let json;
+    try {
+      json = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('JSON 파싱 실패:', parseError);
+      return new NextResponse(`Invalid JSON response from TourAPI: ${responseText.substring(0, 200)}`, { status: 502 });
     }
 
-    const data = await response.json();
-    const items: TourApiItem[] =
-      data?.response?.body?.items?.item
-        ? Array.isArray(data.response.body.items.item)
-          ? data.response.body.items.item
-          : [data.response.body.items.item]
-        : [];
+    // API 응답 구조 확인
+    if (json?.response?.header?.resultCode !== '0000') {
+      const errorMsg = json?.response?.header?.resultMsg || 'Unknown API error';
+      console.error('TourAPI 오류:', json?.response?.header);
+      return new NextResponse(`TourAPI error: ${errorMsg}`, { status: 502 });
+    }
 
-    const parsedLat = parseFloat(lat);
-    const parsedLng = parseFloat(lng);
+    const items: TourApiItem[] = json?.response?.body?.items?.item ?? [];
 
-    const pois = items
-      .map((item) => {
-        const poiLat = item.mapy ? parseFloat(item.mapy) : undefined;
-        const poiLng = item.mapx ? parseFloat(item.mapx) : undefined;
+    const pois: PoiItem[] = items.map((it) => {
+      const itemLat = toNumber(it.mapy);
+      const itemLng = toNumber(it.mapx);
+      const distFromApi = it.dist ? parseFloat(it.dist) : NaN;
+      const distance = Number.isFinite(distFromApi)
+        ? Math.round(distFromApi)
+        : Math.round(haversine(lat, lng, itemLat, itemLng));
 
-        if (!poiLat || !poiLng) {
-          return null;
-        }
-
-        const distance = item.dist
-          ? Math.round(parseFloat(item.dist))
-          : haversineDistance(parsedLat, parsedLng, poiLat, poiLng);
-
-        return {
-          id: item.contentid ?? `${poiLat}-${poiLng}`,
-          title: item.title ?? '이름 미상',
-          lat: poiLat,
-          lng: poiLng,
-          address: item.addr1 ?? item.addr2 ?? '주소 정보 없음',
-          distance,
-          image: item.firstimage || item.firstimage2 || null,
-          contentTypeId: item.contenttypeid ?? null
-        };
-      })
-      .filter((poi): poi is NonNullable<typeof poi> => poi !== null)
-      .sort((a, b) => a.distance - b.distance);
+      return {
+        id: it.contentid,
+        title: it.title,
+        lat: itemLat,
+        lng: itemLng,
+        address: it.addr1 || '',
+        distance,
+        image: it.firstimage || it.firstimage2 || null,
+        contentTypeId: it.contenttypeid || null
+      };
+    })
+    // 반경 밖으로 내려오는 항목이 섞일 수 있어 한 번 더 필터
+    .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng) && p.distance <= radius)
+    // 가까운 순 정렬
+    .sort((a, b) => a.distance - b.distance);
 
     return NextResponse.json(pois);
-  } catch (error) {
-    console.error('TourAPI 데이터 파싱 실패', error);
-    return NextResponse.json(
-      { message: '관광지 데이터를 불러오지 못했습니다.' },
-      { status: 500 }
-    );
+  } catch (err: any) {
+    console.error('API 라우트 오류:', err);
+    return new NextResponse(err?.message || 'Internal Error', { status: 500 });
   }
 }

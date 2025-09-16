@@ -124,22 +124,51 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
 
       markersRef.current = newMarkers;
 
+      // MarkerClustering 생성자 확인 및 안전한 초기화
       if (!clustererRef.current) {
-        clustererRef.current = new window.naver.maps.MarkerClustering({
-          minClusterSize: 2,
-          maxZoom: 15,
-          map,
-          markers: newMarkers,
-          disableClickZoom: false,
-          gridSize: 100,
-          averageCenter: true
-        });
+        try {
+          // 네이버 지도 API v3에서 MarkerClustering 생성자 확인
+          if (window.naver.maps.MarkerClustering) {
+            clustererRef.current = new window.naver.maps.MarkerClustering({
+              minClusterSize: 2,
+              maxZoom: 15,
+              map,
+              markers: newMarkers,
+              disableClickZoom: false,
+              gridSize: 100,
+              averageCenter: true
+            });
+          } else if (window.naver.maps.clustering && window.naver.maps.clustering.MarkerClustering) {
+            // 대안적인 경로로 시도
+            clustererRef.current = new window.naver.maps.clustering.MarkerClustering({
+              minClusterSize: 2,
+              maxZoom: 15,
+              map,
+              markers: newMarkers,
+              disableClickZoom: false,
+              gridSize: 100,
+              averageCenter: true
+            });
+          } else {
+            console.warn('MarkerClustering을 사용할 수 없습니다. 개별 마커로 표시합니다.');
+            // 클러스터링 없이 개별 마커만 지도에 표시
+            newMarkers.forEach(marker => marker.setMap(map));
+          }
+        } catch (error) {
+          console.error('MarkerClustering 초기화 실패:', error);
+          console.warn('클러스터링 없이 개별 마커로 표시합니다.');
+          // 클러스터링 실패 시 개별 마커만 지도에 표시
+          newMarkers.forEach(marker => marker.setMap(map));
+        }
       } else {
         if (typeof clustererRef.current.setMarkers === 'function') {
           clustererRef.current.setMarkers(newMarkers);
         } else if (typeof clustererRef.current.addMarkers === 'function') {
           clustererRef.current.clear && clustererRef.current.clear();
           clustererRef.current.addMarkers(newMarkers);
+        } else {
+          // 클러스터링 업데이트 실패 시 개별 마커로 표시
+          newMarkers.forEach(marker => marker.setMap(map));
         }
       }
     },
@@ -171,9 +200,21 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
 
         const script = document.createElement('script');
         script.type = 'text/javascript';
+        // clusterer 서브모듈을 명시적으로 로드
         script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=clusterer`;
         script.async = true;
-        script.onload = () => resolve();
+        script.onload = () => {
+          // 스크립트 로드 후 MarkerClustering 사용 가능 여부 확인
+          setTimeout(() => {
+            if (window.naver && window.naver.maps) {
+              console.log('네이버 지도 API 로드 완료');
+              console.log('MarkerClustering 사용 가능:', !!window.naver.maps.MarkerClustering);
+              resolve();
+            } else {
+              reject(new Error('네이버 지도 API 로드 실패'));
+            }
+          }, 100);
+        };
         script.onerror = () => reject(new Error('네이버 지도 스크립트 로드 실패'));
         document.head.appendChild(script);
       });
@@ -184,8 +225,13 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
         await loadNaverMapScript();
 
         if (mapContainerRef.current && window.naver && window.naver.maps) {
+          // 사용자 위치가 있으면 그것을 사용하고, 없으면 기본 위치 사용
+          const mapCenter = userLocation.lat !== center.lat || userLocation.lng !== center.lng 
+            ? userLocation 
+            : center;
+
           const mapOptions = {
-            center: new window.naver.maps.LatLng(center.lat, center.lng),
+            center: new window.naver.maps.LatLng(mapCenter.lat, mapCenter.lng),
             zoom,
             mapTypeControl: true,
             mapTypeControlOptions: {
@@ -221,7 +267,10 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
       }
     };
 
-    initializeMap();
+    // 사용자 위치가 설정된 후에 지도 초기화
+    if (userLocation) {
+      initializeMap();
+    }
 
     return () => {
       clearMarkers();
@@ -240,7 +289,7 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
         mapInstanceRef.current = null;
       }
     };
-  }, [center.lat, center.lng, zoom, clientId, clearMarkers]);
+  }, [userLocation, zoom, clientId, clearMarkers]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -344,86 +393,82 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
   }, [isMapReady, userLocation, radius, renderMarkers, clearMarkers]);
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        width,
-        height
-      }}
-    >
-      <div
-        ref={mapContainerRef}
-        style={{
-          width: '100%',
-          height: '100%',
-          border: '1px solid #e5e7eb',
-          borderRadius: '12px'
-        }}
-      />
-
-      <div
-        className="absolute top-4 left-4 bg-white shadow-lg rounded-lg p-4 w-72"
-        style={{ zIndex: 10 }}
-      >
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">반경 설정</h3>
-        <input
-          type="range"
-          min={MIN_RADIUS}
-          max={MAX_RADIUS}
-          step={100}
-          value={radius}
-          onChange={(event) => setRadius(Number(event.target.value))}
-          className="w-full"
+    <div className="flex flex-col lg:flex-row gap-4" style={{ width, height }}>
+      {/* 지도 영역 */}
+      <div className="flex-1" style={{ minHeight: '400px' }}>
+        <div
+          ref={mapContainerRef}
+          style={{
+            width: '100%',
+            height: '100%',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px'
+          }}
         />
-        <div className="text-sm text-gray-600 mt-2">
-          현재 반경: <span className="font-semibold text-blue-600">{formatDistance(radius)}</span>
-        </div>
-        {geolocationError && (
-          <p className="text-xs text-amber-600 mt-2">{geolocationError}</p>
-        )}
       </div>
 
-      <div
-        className="absolute bottom-4 left-4 right-4 sm:right-auto bg-white/90 backdrop-blur shadow-xl rounded-lg p-3 sm:p-4 max-w-sm"
-        style={{ zIndex: 10 }}
-      >
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">주변 관광지</h3>
-        {isLoadingPois && <p className="text-sm text-gray-500">관광지 정보를 불러오는 중...</p>}
-        {!isLoadingPois && poiError && (
-          <p className="text-sm text-red-500">{poiError}</p>
-        )}
-        {!isLoadingPois && !poiError && pois.length === 0 && (
-          <p className="text-sm text-gray-500">주변에 표시할 관광지가 없습니다.</p>
-        )}
-        <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-          {pois.map((poi) => (
-            <div
-              key={poi.id}
-              className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-2 shadow-sm hover:border-blue-400 transition"
-            >
-              <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-                {poi.image ? (
-                  <img
-                    src={poi.image}
-                    alt={poi.title}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                    이미지 없음
-                  </div>
-                )}
+      {/* 사이드 패널 영역 */}
+      <div className="w-full lg:w-80 flex flex-col gap-4" style={{ maxHeight: height }}>
+        {/* 반경 설정 패널 */}
+        <div className="bg-white shadow-lg rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">반경 설정</h3>
+          <input
+            type="range"
+            min={MIN_RADIUS}
+            max={MAX_RADIUS}
+            step={100}
+            value={radius}
+            onChange={(event) => setRadius(Number(event.target.value))}
+            className="w-full"
+          />
+          <div className="text-sm text-gray-600 mt-2">
+            현재 반경: <span className="font-semibold text-blue-600">{formatDistance(radius)}</span>
+          </div>
+          {geolocationError && (
+            <p className="text-xs text-amber-600 mt-2">{geolocationError}</p>
+          )}
+        </div>
+
+        {/* 주변 관광지 패널 */}
+        <div className="bg-white/90 backdrop-blur shadow-xl rounded-lg p-3 sm:p-4 flex-1 overflow-hidden">
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">주변 관광지</h3>
+          {isLoadingPois && <p className="text-sm text-gray-500">관광지 정보를 불러오는 중...</p>}
+          {!isLoadingPois && poiError && (
+            <p className="text-sm text-red-500">{poiError}</p>
+          )}
+          {!isLoadingPois && !poiError && pois.length === 0 && (
+            <p className="text-sm text-gray-500">주변에 표시할 관광지가 없습니다.</p>
+          )}
+          <div className="space-y-3 h-full overflow-y-auto pr-1">
+            {pois.map((poi) => (
+              <div
+                key={poi.id}
+                className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-2 shadow-sm hover:border-blue-400 transition"
+              >
+                <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                  {poi.image ? (
+                    <img
+                      src={poi.image}
+                      alt={poi.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                      이미지 없음
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{poi.title}</p>
+                  <p className="text-xs text-blue-600 font-medium mt-1">{formatDistance(poi.distance)}</p>
+                  <p className="text-xs text-gray-500 mt-1 break-words overflow-hidden">
+                    {poi.address}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{poi.title}</p>
-                <p className="text-xs text-blue-600 font-medium mt-1">{formatDistance(poi.distance)}</p>
-                <p className="text-xs text-gray-500 mt-1 break-words overflow-hidden">
-                  {poi.address}
-                </p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>

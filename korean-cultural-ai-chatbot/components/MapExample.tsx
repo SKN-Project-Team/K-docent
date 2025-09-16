@@ -9,39 +9,14 @@ const MapExample: React.FC = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">네이버 지도 샘플</h1>
+      <h1 className="text-2xl font-bold mb-4">지도</h1>
       
       {/* 기본 지도 */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-2">기본 지도</h2>
+      <div className="mb-3">
         <NaverMapSample 
           clientId={CLIENT_ID}
           width="100%"
           height="400px"
-        />
-      </div>
-
-      {/* 커스텀 설정 지도 */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-2">커스텀 설정 지도 (강남역)</h2>
-        <NaverMapSample 
-          clientId={CLIENT_ID}
-          center={{ lat: 37.4979, lng: 127.0276 }}
-          zoom={15}
-          width="100%"
-          height="300px"
-        />
-      </div>
-
-      {/* 작은 크기 지도 */}
-      <div>
-        <h2 className="text-lg font-semibold mb-2">작은 크기 지도</h2>
-        <NaverMapSample 
-          clientId={CLIENT_ID}
-          center={{ lat: 37.5665, lng: 126.9780 }} // 서울시청
-          zoom={12}
-          width="400px"
-          height="250px"
         />
       </div>
     </div>
