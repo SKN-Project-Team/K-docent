@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Navigation, Map, Users, MessageCircle } from "lucide-react"
+import { Home, Navigation, Users, BookOpen } from "lucide-react"
 import { useApp } from "@/context/AppContext"
 import { getTranslatedText, uiTexts } from "@/utils/translation"
 
@@ -11,21 +11,21 @@ export default function MobileNavigation() {
   const router = useRouter()
   const { userProfile } = useApp()
 
-  // 상세 페이지에서는 네비게이션 숨기기 (채팅은 탭에 포함되므로 제외)
-  if (pathname?.includes('/detail')) {
-    return null
-  }
+  // 상세 페이지에서도 네비게이션 표시하도록 주석 처리
+  // if (pathname?.includes('/detail')) {
+  //   return null
+  // }
 
   const navItems = [
     {
       path: "/",
-      icon: Navigation,
+      icon: Home,
       label: "홈",
       isActive: pathname === "/"
     },
     {
       path: "/map",
-      icon: Map,
+      icon: Navigation,
       label: "지도",
       isActive: pathname === "/map"
     },
@@ -36,30 +36,30 @@ export default function MobileNavigation() {
       isActive: pathname === "/community"
     },
     {
-      path: "/chat",
-      icon: MessageCircle,
-      label: "채팅",
-      isActive: pathname?.includes('/chat')
+      path: "/magazine",
+      icon: BookOpen,
+      label: "매거진",
+      isActive: pathname?.includes('/magazine')
     }
   ]
 
   return (
-    <div className="flex border-t bg-card/90 backdrop-blur-sm">
+    <div className="flex border-t bg-white backdrop-blur-sm">
       {navItems.map((item, index) => {
         const IconComponent = item.icon
         return (
           <Button
             key={item.path}
-            variant={item.isActive ? "default" : "ghost"}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 h-auto rounded-none ${
-              index > 0 ? "border-l" : ""
-            } ${
-              item.isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-            }`}
+            variant="ghost"
+            className="flex-1 flex flex-col items-center gap-1 py-3 h-auto rounded-none bg-white hover:bg-gray-50"
             onClick={() => router.push(item.path)}
           >
-            <IconComponent className="w-5 h-5" />
-            <span className="text-xs">{item.label}</span>
+            <IconComponent className={`w-5 h-5 ${
+              item.isActive ? "text-black" : "text-gray-400"
+            }`} />
+            <span className={`text-xs ${
+              item.isActive ? "text-black" : "text-gray-400"
+            }`}>{item.label}</span>
           </Button>
         )
       })}

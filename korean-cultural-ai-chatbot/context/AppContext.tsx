@@ -347,7 +347,7 @@ const culturalSites: LocationData[] = [
       es: "Pueblo",
       fr: "Village"
     },
-    color: "bg-gradient-to-br from-yellow-100 to-orange-200",
+    color: "bg-gradient-to-br from-yellow-100 to-amber-200",
     buttonText: {
       ko: "지금 둘러볼게요",
       ja: "今見学します",

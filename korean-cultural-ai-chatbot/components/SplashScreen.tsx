@@ -54,7 +54,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
           </h1>
           
           <p className="text-xl md:text-1xl font-light tracking-widest opacity-90 drop-shadow-lg">
-            한국 문화 AI 가이드
+            한국 문화 AI 나레이터
           </p>
         </div>
         

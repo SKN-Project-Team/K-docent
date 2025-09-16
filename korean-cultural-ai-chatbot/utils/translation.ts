@@ -55,7 +55,7 @@ export const uiTexts = {
     fr: "Chat"
   },
   appTitle: {
-    ko: "한국문화 AI 가이드",
+    ko: "한국문화 AI 나레이터",
     ja: "韓国文化AIガイド",
     en: "Korean Culture AI Guide",
     zh: "韩国文化AI指南",
@@ -71,7 +71,7 @@ export const uiTexts = {
     fr: "Voyage culturel où la tradition rencontre la modernité"
   },
   aiGuide: {
-    ko: "AI 가이드",
+    ko: "AI 나레이터",
     ja: "AIガイド", 
     en: "AI Guide",
     zh: "AI指南",

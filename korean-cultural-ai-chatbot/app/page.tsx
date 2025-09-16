@@ -61,7 +61,7 @@ export default function Home() {
       location: "국가유산진흥원",
       description: "어린이들을 위한 국가유산 체험 교육",
       badgeColor: "bg-yellow-100 text-yellow-800",
-      bgColor: "from-yellow-500 to-orange-600"
+      bgColor: "from-yellow-500 to-amber-600"
     },
     {
       title: "2025년 무형유산 전수교육관 활성화 지원사업",
@@ -367,7 +367,7 @@ export default function Home() {
       </div>
 
       {/* 근처 공공기관 행사 정보 */}
-      <div className="px-4 py-8 mt-6" style={{backgroundColor: 'rgba(162, 74, 0, 0.1)'}}>
+      <div className="px-4 py-8 mt-6" style={{background: 'linear-gradient(135deg, #E1DCCA40 0%, #E1DCCA20 100%)'}}>
         <div className="mb-4">
           <h3 className="font-bold text-lg text-gray-800 mb-1">행사/체험/교육 프로그램</h3>
           <p className="text-sm text-gray-600">국가유산을 새롭게 경험해보세요.</p>
@@ -414,7 +414,7 @@ export default function Home() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="space-y-2 py-1">
-                      <Badge className="bg-black/20 text-gray text-xs mb-2">
+                      <Badge className="text-white text-xs backdrop-blur-sm" style={{backgroundColor: '#8A3B08'}}>
                         {festivals[selectedFestival].location}
                       </Badge>
                       <h5 className="font-medium text-sm text-gray-800 leading-tight">{festival.title}</h5>

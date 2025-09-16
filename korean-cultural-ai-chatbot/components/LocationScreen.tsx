@@ -35,7 +35,7 @@ export default function LocationScreen({
             <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">한</AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="font-bold text-xl text-primary">한국문화 AI 가이드</h1>
+            <h1 className="font-bold text-xl text-primary">한국문화 AI 나레이터</h1>
             <p className="text-sm text-muted-foreground">전통과 현대가 만나는 문화 여행</p>
           </div>
         </div>
