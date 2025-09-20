@@ -40,7 +40,8 @@ export default function DetailPage({ params }: DetailPageProps) {
       location={location}
       onBackToList={handleBackToList}
       onChatOpen={handleChatOpen}
-      userLanguage={userProfile.language} 
+      userLanguage={userProfile.language}
+      onGoHome={() => router.push("/")}
     />
   )
 }

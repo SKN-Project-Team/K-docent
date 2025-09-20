@@ -6,7 +6,6 @@ import { GeistMono } from "geist/font/mono"
 import { Suspense, useState } from "react"
 import "./globals.css"
 import { AppProvider } from "@/context/AppContext"
-import MobileNavigation from "@/components/Layout/MobileNavigation"
 import SplashScreen from "@/components/SplashScreen"
 
 
@@ -36,9 +35,6 @@ export default function RootLayout({
           {!showSplash && (
             <>
               <Suspense fallback={null}>{children}</Suspense>
-              <div className="fixed bottom-0 left-0 right-0 z-50">
-                <MobileNavigation />
-              </div>
             </>
           )}
         </AppProvider>

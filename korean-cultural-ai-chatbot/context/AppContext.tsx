@@ -401,7 +401,17 @@ const culturalSites: LocationData[] = [
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "welcome",
+      type: "ai",
+      content:
+        "안녕하세요! 한국문화 AI 도슨트입니다. 궁금한 문화재나 축제에 대해 질문해 주시면 차근차근 안내해 드릴게요.",
+      timestamp: new Date(),
+      location: "경복궁",
+      sources: ["문화재청", "한국관광공사"],
+    },
+  ])
   const [inputMessage, setInputMessage] = useState("")
   const [isPlaying, setIsPlaying] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState({

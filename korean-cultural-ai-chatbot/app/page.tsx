@@ -12,9 +12,31 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Search, Menu, ChevronDown, ArrowRight } from "lucide-react"
-import { useState } from "react"
+import { Search, Map, ChevronDown, ArrowRight, X, Calendar, MapPin, Phone } from "lucide-react"
+import { useState, useEffect } from "react"
 import { getTranslatedText, uiTexts } from "@/utils/translation"
+import { AppHeader } from "@/components/Layout/AppHeader"
+
+// Festival 타입 정의
+type Festival = {
+  id: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  address: string;
+  phone?: string;
+  image?: string;
+  thumbnailImage?: string;
+  lat?: number;
+  lng?: number;
+  category: string;
+  areaCode?: string;
+  distance?: number;
+  isOngoing: boolean;
+  daysUntilStart?: number;
+  daysUntilEnd?: number;
+}
 
 export default function Home() {
   const router = useRouter()
@@ -28,53 +50,88 @@ export default function Home() {
   // 축제 선택 상태
   const [selectedFestival, setSelectedFestival] = useState(0)
   
-  // 축제 데이터 (실제 이미지 적용)
-  const festivals = [
-    {
-      title: "2024년 제1기 국가유산교육전문가 양성과정(기본교육)",
-      date: "2024.03.05 ~ 03.07",
-      place: "집합연수 3박 4일",
-      img: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=250&fit=crop&crop=center", // 교육 세미나
-      icon: "🎓",
-      location: "국가유산진흥원",
-      description: "국가유산 교육 전문가로 성장할 수 있는 기회",
-      badgeColor: "bg-green-100 text-green-800",
-      bgColor: "from-green-500 to-emerald-600"
-    },
-    {
-      title: "2024년 국가유산교육 수업안 경진대회",
-      date: "2024.05.31 ~ 09.02",
-      place: "온라인 접수",
-      img: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&h=250&fit=crop&crop=center", // 상장, 트로피
-      icon: "🏆",
-      location: "국가유산진흥원",
-      description: "학교 현장에서 활용 가능한 수업안 발굴",
-      badgeColor: "bg-purple-100 text-purple-800",
-      bgColor: "from-purple-500 to-indigo-600"
-    },
-    {
-      title: "국가유산꿈쟁이 교육프로그램",
-      date: "상시 운영",
-      place: "각 지역별 교육장",
-      img: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=250&fit=crop&crop=center", // 어린이 교육
-      icon: "🧒",
-      location: "국가유산진흥원",
-      description: "어린이들을 위한 국가유산 체험 교육",
-      badgeColor: "bg-yellow-100 text-yellow-800",
-      bgColor: "from-yellow-500 to-amber-600"
-    },
-    {
-      title: "2025년 무형유산 전수교육관 활성화 지원사업",
-      date: "2024.04.30까지 신청",
-      place: "전국 전수교육관",
-      img: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400&h=250&fit=crop&crop=center", // 한국 전통 건물
-      icon: "🏢",
-      location: "국가유산진흥원",
-      description: "전국 전수교육관의 무형유산 교육·체험 지원",
-      badgeColor: "bg-indigo-100 text-indigo-800",
-      bgColor: "from-indigo-500 to-cyan-600"
+  // 축제 카드 확장 상태 추가
+  const [expandedFestival, setExpandedFestival] = useState<string | null>(null)
+  
+  // 축제 데이터 상태 관리
+  const [festivals, setFestivals] = useState<Festival[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // 축제 데이터를 API에서 가져오는 함수
+  const fetchFestivals = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      // 기본 위치 (서울시청 좌표)
+      const defaultLat = 37.5666805
+      const defaultLng = 126.9784147
+      
+      const response = await fetch(`/api/festivals?lat=${defaultLat}&lng=${defaultLng}&maxResults=10`)
+      
+      if (!response.ok) {
+        throw new Error('축제 데이터를 가져오는데 실패했습니다.')
+      }
+      
+      const data = await response.json()
+      // API 응답에서 festivals 배열을 추출
+      setFestivals(data.festivals || [])
+      
+      // 축제가 있으면 첫 번째 축제를 선택
+      if (data.festivals && data.festivals.length > 0) {
+        setSelectedFestival(0)
+      }
+    } catch (err) {
+      console.error('축제 데이터 로딩 오류:', err)
+      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+      
+      // 오류 발생 시 기본 데이터 사용
+      setFestivals([
+        {
+          id: "default-1",
+          title: "국가유산 교육 프로그램",
+          description: "국가유산을 새롭게 경험해보세요",
+          startDate: "20241201",
+          endDate: "20241231",
+          address: "서울특별시",
+          image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=250&fit=crop&crop=center",
+          category: "교육/체험",
+          isOngoing: true
+        }
+      ])
+    } finally {
+      setIsLoading(false)
     }
-  ]
+  }
+
+  // 컴포넌트 마운트 시 축제 데이터 로드
+  useEffect(() => {
+    fetchFestivals()
+  }, [])
+
+  // API 데이터를 기존 형식에 맞게 변환하는 함수
+  const formatFestivalForDisplay = (festival: Festival) => {
+    const formatDate = (dateStr: string) => {
+      if (!dateStr || dateStr.length !== 8) return dateStr
+      const year = dateStr.substring(0, 4)
+      const month = dateStr.substring(4, 6)
+      const day = dateStr.substring(6, 8)
+      return `${year}.${month}.${day}`
+    }
+
+    return {
+      title: festival.title,
+      date: `${formatDate(festival.startDate)} ~ ${formatDate(festival.endDate)}`,
+      place: festival.address,
+      img: festival.image || festival.thumbnailImage || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=250&fit=crop&crop=center",
+      icon: festival.isOngoing ? "🎉" : "📅",
+      location: festival.address.split(' ')[0] || "전국",
+      description: festival.description || festival.category,
+      badgeColor: festival.isOngoing ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800",
+      bgColor: festival.isOngoing ? "from-green-500 to-emerald-600" : "from-blue-500 to-indigo-600"
+    }
+  }
 
   const handleLocationSelect = (siteId: string) => {
     router.push(`/detail/${siteId}`)
@@ -123,12 +180,16 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-16">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-3">
-          <h1 className="font-app-title font-bold text-xl text-gray-800">K-Docent</h1>
-        </div>
-      </div>
+      <AppHeader
+        actions={[{
+          key: "map",
+          icon: <Map className="w-4 h-4" />,
+          label: "지도",
+          onClick: () => router.push("/map"),
+          variant: "outline",
+          className: "border-gray-200 text-gray-700 hover:bg-gray-100",
+        }]}
+      />
       
 
       {/* 검색바 */}
@@ -189,9 +250,6 @@ export default function Home() {
                       <Badge variant="secondary" className="bg-white/90 text-gray-800 shadow-sm backdrop-blur-sm text-xs">
                         {getTranslatedText(uiTexts.aiNarration, userProfile.language)}
                       </Badge>
-                      <div className="flex items-center gap-1 bg-white/90 rounded-full px-2 py-1 backdrop-blur-sm">
-                        <span className="text-xs font-medium text-gray-800">★ 4.8</span>
-                      </div>
                     </div>
 
                     {/* Content */}
@@ -374,58 +432,167 @@ export default function Home() {
         </div>
 
         {/* 메인 이벤트 카드 - 동적 변경 */}
-        <Card 
-          className="mb-4 overflow-hidden text-white relative cursor-pointer transition-all duration-500"
-          onClick={() => {/* 메인 카드 클릭 시 대응 로직 */}}
-          style={{
-            backgroundImage: festivals[selectedFestival].img ? `url(${festivals[selectedFestival].img})` : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            minHeight: '200px'
-          }}
-        >
-          <div className="absolute inset-0 bg-black/50"></div>
-          <div className="relative p-6 z-10">
-            <div className="flex justify-between items-start mb-4">
-              <Badge className="bg-white/20 text-white text-xs">
-                {festivals[selectedFestival].location}
-              </Badge>
+        {isLoading ? (
+          <Card className="mb-4 overflow-hidden relative animate-pulse">
+            <div className="h-48 bg-gray-200"></div>
+            <div className="p-6">
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-6 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded"></div>
             </div>
-            <div>
-              <h4 className="font-bold text-xl mb-2">{festivals[selectedFestival].title}</h4>
-              <p className="text-white/90 text-sm mb-2">{festivals[selectedFestival].description}</p>
-              <p className="text-white/70 text-xs">{festivals[selectedFestival].date} | {festivals[selectedFestival].place}</p>
+          </Card>
+        ) : error ? (
+          <Card className="mb-4 overflow-hidden text-white relative cursor-pointer transition-all duration-500 bg-red-500">
+            <div className="p-6">
+              <div className="text-center">
+                <h4 className="font-bold text-xl mb-2">데이터 로딩 오류</h4>
+                <p className="text-white/90 text-sm mb-2">{error}</p>
+                <Button 
+                  onClick={fetchFestivals}
+                  variant="outline" 
+                  className="text-red-500 border-white hover:bg-white/10"
+                >
+                  다시 시도
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 translate-x-12"></div>
-        </Card>
+          </Card>
+        ) : festivals.length > 0 ? (
+          <Card 
+            className={`mb-4 overflow-hidden text-white relative cursor-pointer transition-all duration-500 ${
+              expandedFestival === festivals[selectedFestival].id ? 'shadow-2xl' : 'hover:shadow-lg'
+            }`}
+            onClick={() => setExpandedFestival(festivals[selectedFestival].id === expandedFestival ? null : festivals[selectedFestival].id)}
+            style={{
+              backgroundImage: formatFestivalForDisplay(festivals[selectedFestival]).img ? `url(${formatFestivalForDisplay(festivals[selectedFestival]).img})` : 'none',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              minHeight: expandedFestival === festivals[selectedFestival].id ? '400px' : '200px'
+            }}
+          >
+            {/* 배경 이미지를 어둡게 처리하는 강한 오버레이 */}
+            <div className={`absolute inset-0 ${
+              formatFestivalForDisplay(festivals[selectedFestival]).img 
+                ? 'bg-black/70' 
+                : formatFestivalForDisplay(festivals[selectedFestival]).bgColor
+            } transition-all duration-300`}></div>
+            
+            <div className="relative p-6 h-full text-white z-10 flex flex-col">
+              {/* 닫기 버튼 (확장된 상태에서만 표시) */}
+              {expandedFestival === festivals[selectedFestival].id && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-4 right-4 p-2 h-auto hover:bg-white/20 rounded-full transition-colors z-20"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setExpandedFestival(null)
+                  }}
+                >
+                  <X className="w-5 h-5 text-white" />
+                </Button>
+              )}
 
-        {/* 작은 이벤트 카드들 */}
-        <div className="space-y-3">
-          {festivals.map((festival, index) => {
-            if (index === selectedFestival) return null; // 선택된 축제는 작은 카드에서 숨김
-            return (
-              <Card 
-                key={index}
-                className="p-4 hover:shadow-md transition-all duration-300 cursor-pointer border border-gray-200 hover:border-primary/30 hover:bg-gray-50"
-                onClick={() => setSelectedFestival(index)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="space-y-2 py-1">
-                      <Badge className="text-white text-xs backdrop-blur-sm" style={{backgroundColor: '#8A3B08'}}>
-                        {festivals[selectedFestival].location}
-                      </Badge>
-                      <h5 className="font-medium text-sm text-gray-800 leading-tight">{festival.title}</h5>
-                      <p className="text-xs text-gray-600 leading-relaxed">{festival.date} | {festival.place}</p>
+              {/* 기본 카드 내용 */}
+              <div className="flex items-start justify-between mb-4">
+                <Badge variant="secondary" className="bg-white/90 text-gray-800 shadow-sm backdrop-blur-sm">
+                  진행중
+                </Badge>
+                <div className="text-xs text-white/80">
+                  {selectedFestival + 1} / {festivals.length}
+                </div>
+              </div>
+
+              <div className="flex-1 flex flex-col justify-end">
+                <h4 className="font-bold text-xl mb-2">
+                  {formatFestivalForDisplay(festivals[selectedFestival]).title}
+                </h4>
+                <p className="text-sm text-white/90 mb-3">
+                  {formatFestivalForDisplay(festivals[selectedFestival]).description}
+                </p>
+
+                {/* 확장된 상태에서 추가 정보 표시 */}
+                {expandedFestival === festivals[selectedFestival].id && (
+                  <div className="mt-8 space-y-3 animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 space-y-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="w-4 h-4" />
+                        <span>{formatFestivalForDisplay(festivals[selectedFestival]).date}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="w-4 h-4" />
+                        <span>{formatFestivalForDisplay(festivals[selectedFestival]).place}</span>
+                      </div>
+                      {festivals[selectedFestival].phone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="w-4 h-4" />
+                          <span>{festivals[selectedFestival].phone}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 bg-white/20 hover:bg-white/30 text-white font-medium py-3 rounded-lg shadow-lg transition-all duration-200 backdrop-blur-sm border border-white/30 hover:border-white/50"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // 상세 페이지로 이동 또는 추가 액션
+                        }}
+                      >
+                        자세히 보기
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 bg-transparent hover:bg-white/10 text-white font-medium py-3 rounded-lg shadow-lg transition-all duration-200 backdrop-blur-sm border border-white/50 hover:border-white/70"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // 지도에서 보기 또는 위치 정보
+                        }}
+                      >
+                        위치 보기
+                      </Button>
                     </div>
                   </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                )}
+
+                {/* 기본 상태에서의 간단한 정보 */}
+                {expandedFestival !== festivals[selectedFestival].id && (
+                  <div className="flex items-center justify-between text-xs text-white/80 mt-2">
+                    <span>{formatFestivalForDisplay(festivals[selectedFestival]).date}</span>
+                    <span>{formatFestivalForDisplay(festivals[selectedFestival]).place}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <Card className="mb-4 overflow-hidden text-white relative bg-gradient-to-br from-gray-400 to-gray-500">
+            <div className="p-6 text-center">
+              <h4 className="font-bold text-xl mb-2">축제 정보 없음</h4>
+              <p className="text-white/90 text-sm">현재 진행중인 축제가 없습니다.</p>
+            </div>
+          </Card>
+        )}
+
+        {/* 축제 네비게이션 점들 */}
+        {festivals.length > 1 && (
+          <div className="flex justify-center gap-2 mb-4">
+            {festivals.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedFestival(idx)}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  idx === selectedFestival 
+                    ? "bg-primary w-6" 
+                    : "bg-gray-300 hover:bg-gray-400"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* ... existing code ... */}
       </div>
     </div>
   )

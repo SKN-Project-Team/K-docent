@@ -9,9 +9,6 @@ const MapExample: React.FC = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">지도</h1>
-      
-      {/* 기본 지도 */}
       <div className="mb-3">
         <NaverMapSample 
           clientId={CLIENT_ID}

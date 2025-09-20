@@ -4,11 +4,11 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, MessageCircle, MapPin, Play, Pause, Volume2 } from "lucide-react"
+import { Home, MessageCircle, MapPin, Play, Pause, Volume2 } from "lucide-react"
 import { LocationData } from "@/types"
 import { getTranslatedText } from "@/utils/translation"
-// 상단 imports에 수정
 import VoicePicker, { VoiceItem } from "@/components/VoicePicker"
+import { AppHeader } from "@/components/Layout/AppHeader"
 
 type Difficulty = "basic" | "standard" | "advanced"
 type Voice = "warm" | "calm" | "bright"
@@ -18,13 +18,15 @@ interface DetailScreenProps {
   onBackToList: () => void
   onChatOpen: () => void
   userLanguage: string
+  onGoHome: () => void
 }
 
 export default function DetailScreen({
   location,
   onBackToList,
   onChatOpen,
-  userLanguage
+  userLanguage,
+  onGoHome
 }: DetailScreenProps) {
   const [isPlaying, setIsPlaying] = useState<string | null>(null)
 
@@ -60,19 +62,13 @@ export default function DetailScreen({
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-white border-b sticky top-0 z-40 shadow-sm">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBackToList}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
-            aria-label="뒤로가기"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </Button>
-
-          {location.backgroundImage && (
+      <div className="sticky top-0 z-40 bg-white border-b shadow-sm">
+        <AppHeader
+          className="bg-white"
+          title={getTranslatedText(location.name, userLanguage)}
+          subtitle={`${getTranslatedText(location.category, userLanguage)} • ${location.distance}km`}
+          onBack={onBackToList}
+          leadingContent={location.backgroundImage ? (
             <div
               aria-hidden
               className="w-10 h-10 rounded-full shadow-md overflow-hidden border-2 border-white flex-shrink-0"
@@ -82,30 +78,27 @@ export default function DetailScreen({
                 backgroundPosition: "center",
               }}
             />
-          )}
-
-          <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-lg text-gray-900 truncate">
-              {getTranslatedText(location.name, userLanguage)}
-            </h1>
-            <p className="text-sm text-gray-600 truncate flex items-center gap-1">
-              <span>{getTranslatedText(location.category, userLanguage)}</span>
-              <span>•</span>
-              <MapPin className="w-3.5 h-3.5 opacity-70" />
-              <span>{location.distance}km</span>
-            </p>
-          </div>
-        </div>
-
-        <Button
-          onClick={onChatOpen}
-          className="text-white shadow-md rounded-lg px-3 py-2 transition-all duration-200 flex-shrink-0 ml-2"
-          aria-label="채팅 열기"
-          style={{backgroundColor: '#556B2F'}}
-        >
-          <MessageCircle className="w-4 h-4 mr-1" />
-          채팅
-        </Button>
+          ) : null}
+          actions={[
+            {
+              key: "home",
+              icon: <Home className="w-5 h-5 text-gray-600" />,
+              onClick: onGoHome,
+              variant: "ghost",
+              className: "p-2 rounded-full hover:bg-gray-100",
+              ariaLabel: "홈으로 이동",
+            },
+            {
+              key: "chat",
+              icon: <MessageCircle className="w-4 h-4" />,
+              label: "채팅",
+              onClick: onChatOpen,
+              variant: "default",
+              className: "bg-[#556B2F] hover:bg-[#465726] text-white rounded-lg px-3 py-2",
+              ariaLabel: "채팅 열기",
+            },
+          ]}
+        />
       </div>
 
       {/* 🔧 사용자 컨트롤 바 (난이도 선택 + 목소리 선택) */}

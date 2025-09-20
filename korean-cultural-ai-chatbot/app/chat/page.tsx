@@ -29,6 +29,7 @@ export default function ChatPage() {
       setIsListening={setIsListening}
       userProfile={userProfile}
       onBackToDetail={handleBackToDetail}
+      onGoHome={() => router.push("/")}
     />
   )
 }
