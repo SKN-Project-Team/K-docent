@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useGeolocation, useNearbyHeritage } from '@/lib/api/hooks';
+import { useApp } from '@/context/AppContext';
 
 // 네이버 지도 타입 정의
 declare global {
@@ -20,27 +22,26 @@ interface NaverMapSampleProps {
   clientId: string;
 }
 
-interface PoiItem {
-  id: string;
-  title: string;
-  lat: number;
-  lng: number;
-  address: string;
-  distance: number;
-  image: string | null;
-  contentTypeId: string | null;
+interface HeritageItem {
+  content_id: number;
+  site_id: number;
+  language: string;
+  name: string;
+  description_summary: string;
+  latitude: number;
+  longitude: number;
+  distance_km: number;
+  image_url?: string;
+  has_tts_audio: boolean;
 }
 
-const MIN_RADIUS = 500;
-const MAX_RADIUS = 2000;
-const DEFAULT_RADIUS = 1000;
+const FIXED_RADIUS_KM = 10;
 
-const formatDistance = (distance: number) => {
-  if (distance >= 1000) {
-    return `${(distance / 1000).toFixed(1)}km`;
+const formatDistance = (distance_km: number) => {
+  if (distance_km < 1) {
+    return `${Math.round(distance_km * 1000)}m`;
   }
-
-  return `${distance}m`;
+  return `${distance_km.toFixed(1)}km`;
 };
 
 const NaverMapSample: React.FC<NaverMapSampleProps> = ({
@@ -57,13 +58,21 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
   const userMarkerRef = useRef<any>(null);
   const infoWindowRef = useRef<any>(null);
 
-  const [userLocation, setUserLocation] = useState(center);
-  const [radius, setRadius] = useState(DEFAULT_RADIUS);
-  const [pois, setPois] = useState<PoiItem[]>([]);
+  const { userProfile } = useApp();
+  const { location, loading: locationLoading, error: locationError } = useGeolocation();
+  const { heritage, loading: heritageLoading, error: heritageError } = useNearbyHeritage(
+    location ? {
+      latitude: location.lat,
+      longitude: location.lng,
+      radius_km: FIXED_RADIUS_KM,
+      language: userProfile.language || 'ko',
+      limit: 50
+    } : undefined
+  );
+
   const [isMapReady, setIsMapReady] = useState(false);
-  const [isLoadingPois, setIsLoadingPois] = useState(false);
-  const [geolocationError, setGeolocationError] = useState<string | null>(null);
-  const [poiError, setPoiError] = useState<string | null>(null);
+  const [hasInitialLocationSet, setHasInitialLocationSet] = useState(false);
+  const userLocation = location || center;
 
   const clearMarkers = useCallback(() => {
     markersRef.current.forEach((marker) => {
@@ -83,7 +92,7 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
   }, []);
 
   const renderMarkers = useCallback(
-    (items: PoiItem[]) => {
+    (items: HeritageItem[]) => {
       if (!window.naver || !window.naver.maps || !mapInstanceRef.current) {
         return;
       }
@@ -91,26 +100,27 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
       const map = mapInstanceRef.current;
       clearMarkers();
 
-      const newMarkers = items.map((poi) => {
+      const newMarkers = items.map((heritage) => {
         const marker = new window.naver.maps.Marker({
-          position: new window.naver.maps.LatLng(poi.lat, poi.lng),
-          title: poi.title
+          position: new window.naver.maps.LatLng(heritage.latitude, heritage.longitude),
+          title: heritage.name
         });
 
         if (window.naver.maps.Event && infoWindowRef.current) {
           window.naver.maps.Event.addListener(marker, 'click', () => {
             const content = `
               <div style="min-width: 220px; max-width: 240px; font-size: 13px;">
-                <strong style="display: block; font-size: 14px; margin-bottom: 6px;">${poi.title}</strong>
+                <strong style="display: block; font-size: 14px; margin-bottom: 6px;">${heritage.name}</strong>
                 ${
-                  poi.image
-                    ? `<img src="${poi.image}" alt="${poi.title}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 6px; margin-bottom: 6px;" />`
+                  heritage.image_url
+                    ? `<img src="${heritage.image_url}" alt="${heritage.name}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 6px; margin-bottom: 6px;" />`
                     : ''
                 }
                 <span style="display: block; margin-bottom: 4px; color: #2563eb; font-weight: 600;">${formatDistance(
-                  poi.distance
+                  heritage.distance_km
                 )}</span>
-                <span style="display: block; color: #4b5563;">${poi.address}</span>
+                <span style="display: block; color: #4b5563;">${heritage.description_summary}</span>
+                ${heritage.has_tts_audio ? '<span style="display: inline-block; background: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-top: 4px;">음성해설</span>' : ''}
               </div>
             `;
 
@@ -232,7 +242,7 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
 
           const mapOptions = {
             center: new window.naver.maps.LatLng(mapCenter.lat, mapCenter.lng),
-            zoom,
+            zoom: location ? 15 : zoom, // GPS 위치가 있으면 더 높은 줌 레벨로 포커싱
             mapTypeControl: true,
             mapTypeControlOptions: {
               style: window.naver.maps.MapTypeControlStyle.BUTTON,
@@ -291,28 +301,6 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
     };
   }, [userLocation, zoom, clientId, clearMarkers]);
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setGeolocationError('브라우저에서 위치 정보를 지원하지 않습니다.');
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
-      },
-      (error) => {
-        console.warn('사용자 위치를 가져오지 못했습니다:', error);
-        setGeolocationError('사용자 위치를 확인할 수 없어 기본 위치를 사용합니다.');
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 1000 * 60 * 5
-      }
-    );
-  }, []);
 
   useEffect(() => {
     if (!isMapReady || !window.naver || !window.naver.maps || !mapInstanceRef.current) {
@@ -322,17 +310,54 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
     const map = mapInstanceRef.current;
     const location = new window.naver.maps.LatLng(userLocation.lat, userLocation.lng);
 
-    map.setCenter(location);
+    // GPS 위치가 처음 감지된 경우에만 포커싱
+    if (!hasInitialLocationSet && userLocation.lat !== center.lat && userLocation.lng !== center.lng) {
+      map.morph(location, 15, {
+        duration: 1000,
+        easing: 'easeOutCubic'
+      });
+      setHasInitialLocationSet(true);
+    } else if (!hasInitialLocationSet) {
+      // GPS 위치가 아직 감지되지 않은 경우 중심만 설정
+      map.setCenter(location);
+    }
 
     if (!userMarkerRef.current) {
       userMarkerRef.current = new window.naver.maps.Marker({
         position: location,
         map,
         icon: {
-          content:
-            '<div style="background:#2563eb;color:#fff;padding:6px 8px;border-radius:9999px;font-size:12px;font-weight:700;">내 위치</div>',
-          anchor: new window.naver.maps.Point(30, 30)
-        }
+          content: `
+            <div style="
+              position: relative;
+              width: 20px;
+              height: 20px;
+              background: #3b82f6;
+              border: 3px solid #fff;
+              border-radius: 50%;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            ">
+              <div style="
+                position: absolute;
+                top: -35px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #1e40af;
+                color: #fff;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 600;
+                white-space: nowrap;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+              ">
+                📍 내 위치
+              </div>
+            </div>
+          `,
+          anchor: new window.naver.maps.Point(10, 10)
+        },
+        zIndex: 1000
       });
     } else {
       userMarkerRef.current.setPosition(location);
@@ -340,57 +365,15 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
         userMarkerRef.current.setMap(map);
       }
     }
-  }, [isMapReady, userLocation]);
+  }, [isMapReady, userLocation, hasInitialLocationSet, center]);
 
   useEffect(() => {
-    if (!isMapReady || !userLocation) {
+    if (!isMapReady || !heritage?.results) {
       return;
     }
 
-    const controller = new AbortController();
-
-    const fetchPois = async () => {
-      setIsLoadingPois(true);
-      setPoiError(null);
-
-      try {
-        const query = new URLSearchParams({
-          lat: String(userLocation.lat),
-          lng: String(userLocation.lng),
-          radius: String(radius)
-        });
-
-        const response = await fetch(`/api/pois/nearby?${query.toString()}`, {
-          signal: controller.signal
-        });
-
-        if (!response.ok) {
-          throw new Error(await response.text());
-        }
-
-        const data: PoiItem[] = await response.json();
-        setPois(data);
-        renderMarkers(data);
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
-          return;
-        }
-
-        console.error('POI 데이터 요청 실패:', error);
-        setPois([]);
-        setPoiError('주변 관광지 정보를 불러오지 못했습니다.');
-        clearMarkers();
-      } finally {
-        setIsLoadingPois(false);
-      }
-    };
-
-    fetchPois();
-
-    return () => {
-      controller.abort();
-    };
-  }, [isMapReady, userLocation, radius, renderMarkers, clearMarkers]);
+    renderMarkers(heritage.results);
+  }, [isMapReady, heritage, renderMarkers]);
 
   return (
     <div className="flex flex-col lg:flex-row gap-4" style={{ width, height }}>
@@ -409,47 +392,45 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
 
       {/* 사이드 패널 영역 */}
       <div className="w-full lg:w-80 flex flex-col gap-4" style={{ maxHeight: height }}>
-        {/* 반경 설정 패널 */}
+        {/* 위치 정보 패널 */}
         <div className="bg-white shadow-lg rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">반경 설정</h3>
-          <input
-            type="range"
-            min={MIN_RADIUS}
-            max={MAX_RADIUS}
-            step={100}
-            value={radius}
-            onChange={(event) => setRadius(Number(event.target.value))}
-            className="w-full"
-          />
-          <div className="text-sm text-gray-600 mt-2">
-            현재 반경: <span className="font-semibold text-blue-600">{formatDistance(radius)}</span>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">검색 범위</h3>
+          <div className="text-sm text-gray-600">
+            반경: <span className="font-semibold text-blue-600">{FIXED_RADIUS_KM}km</span>
           </div>
-          {geolocationError && (
-            <p className="text-xs text-amber-600 mt-2">{geolocationError}</p>
+          {locationError && (
+            <p className="text-xs text-amber-600 mt-2">{locationError}</p>
+          )}
+          {locationLoading && (
+            <p className="text-xs text-gray-500 mt-2">위치 정보를 가져오는 중...</p>
           )}
         </div>
 
-        {/* 주변 관광지 패널 */}
+        {/* 주변 문화재 패널 */}
         <div className="bg-white/90 backdrop-blur shadow-xl rounded-lg p-3 sm:p-4 flex-1 overflow-hidden">
-          <h3 className="text-sm font-semibold text-gray-900 mb-2">주변 관광지</h3>
-          {isLoadingPois && <p className="text-sm text-gray-500">관광지 정보를 불러오는 중...</p>}
-          {!isLoadingPois && poiError && (
-            <p className="text-sm text-red-500">{poiError}</p>
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">주변 문화재</h3>
+          {heritageLoading && <p className="text-sm text-gray-500">문화재 정보를 불러오는 중...</p>}
+          {!heritageLoading && heritageError && (
+            <p className="text-sm text-red-500">{heritageError.getUserFriendlyMessage()}</p>
           )}
-          {!isLoadingPois && !poiError && pois.length === 0 && (
-            <p className="text-sm text-gray-500">주변에 표시할 관광지가 없습니다.</p>
+          {!heritageLoading && !heritageError && (!heritage?.results || heritage.results.length === 0) && (
+            <p className="text-sm text-gray-500">주변에 표시할 문화재가 없습니다.</p>
           )}
           <div className="space-y-3 h-full overflow-y-auto pr-1">
-            {pois.map((poi) => (
+            {heritage?.results?.map((heritageItem) => (
               <div
-                key={poi.id}
-                className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-2 shadow-sm hover:border-blue-400 transition"
+                key={heritageItem.content_id}
+                className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-2 shadow-sm hover:border-blue-400 transition cursor-pointer"
+                onClick={() => {
+                  // 상세 페이지로 이동
+                  window.location.href = `/detail/${heritageItem.content_id}`;
+                }}
               >
                 <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-                  {poi.image ? (
+                  {heritageItem.image_url ? (
                     <img
-                      src={poi.image}
-                      alt={poi.title}
+                      src={heritageItem.image_url}
+                      alt={heritageItem.name}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
@@ -460,14 +441,19 @@ const NaverMapSample: React.FC<NaverMapSampleProps> = ({
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{poi.title}</p>
-                  <p className="text-xs text-blue-600 font-medium mt-1">{formatDistance(poi.distance)}</p>
-                  <p className="text-xs text-gray-500 mt-1 break-words overflow-hidden">
-                    {poi.address}
+                  <p className="text-sm font-semibold text-gray-900 truncate">{heritageItem.name}</p>
+                  <p className="text-xs text-blue-600 font-medium mt-1">{formatDistance(heritageItem.distance_km)}</p>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    {heritageItem.description_summary}
                   </p>
+                  {heritageItem.has_tts_audio && (
+                    <span className="inline-block bg-blue-500 text-white text-xs px-2 py-1 rounded mt-1">
+                      음성해설
+                    </span>
+                  )}
                 </div>
               </div>
-            ))}
+            )) || []}
           </div>
         </div>
       </div>

@@ -7,12 +7,13 @@ import { cn } from "@/lib/utils"
 
 type HeaderAction = {
   key: string
-  icon: ReactNode
+  icon?: ReactNode
   label?: string
-  onClick: () => void
+  onClick?: () => void
   variant?: ButtonProps["variant"]
   className?: string
   ariaLabel?: string
+  component?: ReactNode
 }
 
 interface AppHeaderProps {
@@ -59,23 +60,27 @@ export function AppHeader({
 
       {actions.length > 0 && (
         <div className="flex items-center gap-2 flex-shrink-0">
-          {actions.map(({ key, icon, label, onClick, variant = "ghost", className: actionClassName, ariaLabel }) => (
-            <Button
-              key={key}
-              variant={variant}
-              size={label ? "default" : "sm"}
-              className={cn(
-                label
-                  ? "flex items-center gap-2 rounded-full"
-                  : "p-2 rounded-full",
-                actionClassName,
-              )}
-              onClick={onClick}
-              aria-label={ariaLabel ?? label ?? "header-action"}
-            >
-              {icon}
-              {label && <span className="text-sm font-medium">{label}</span>}
-            </Button>
+          {actions.map(({ key, icon, label, onClick, variant = "ghost", className: actionClassName, ariaLabel, component }) => (
+            component ? (
+              <div key={key}>{component}</div>
+            ) : (
+              <Button
+                key={key}
+                variant={variant}
+                size={label ? "default" : "sm"}
+                className={cn(
+                  label
+                    ? "flex items-center gap-2 rounded-full"
+                    : "p-2 rounded-full",
+                  actionClassName,
+                )}
+                onClick={onClick}
+                aria-label={ariaLabel ?? label ?? "header-action"}
+              >
+                {icon}
+                {label && <span className="text-sm font-medium">{label}</span>}
+              </Button>
+            )
           ))}
         </div>
       )}

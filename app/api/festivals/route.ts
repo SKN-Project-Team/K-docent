@@ -96,6 +96,24 @@ function getFestivalStatus(startDate: string, endDate: string) {
   };
 }
 
+// 언어 코드를 API 서비스명으로 변환
+function getServiceName(language: string): string {
+  const serviceMap: { [key: string]: string } = {
+    'ko': 'KorService2',      // 한국어 (기본)
+    'en': 'EngService2',      // 영어
+    'ja': 'JpnService2',      // 일본어
+    'zh': 'ChtService2',      // 중국어 간체
+    'zh-CN': 'ChtService2',   // 중국어 간체
+    'zh-TW': 'ChtService2',   // 중국어 번체
+    'de': 'GerService2',      // 독일어
+    'fr': 'FreService2',      // 프랑스어
+    'es': 'SpnService2',      // 스페인어
+    'ru': 'RusService2'       // 러시아어
+  };
+
+  return serviceMap[language] || 'KorService2'; // 기본값은 한국어
+}
+
 // 카테고리 코드를 한글로 변환
 function getCategoryName(cat1?: string, cat2?: string): string {
   const categories: { [key: string]: string } = {
@@ -110,7 +128,7 @@ function getCategoryName(cat1?: string, cat2?: string): string {
     'A02080500': '전시회',
     'A02081300': '기타행사'
   };
-  
+
   return categories[cat2 || ''] || categories[cat1 || ''] || '행사/축제';
 }
 
@@ -124,6 +142,7 @@ export async function GET(req: NextRequest) {
     const sigunguCode = searchParams.get('sigunguCode') || '';
     const maxResults = Math.min(50, parseInt(searchParams.get('maxResults') || '20', 10));
     const includePast = searchParams.get('includePast') === 'true'; // 과거 행사 포함 여부
+    const language = searchParams.get('language') || 'ko'; // 언어 파라미터 추가
     
     const serviceKey = process.env.TOURAPI_SERVICE_KEY;
     if (!serviceKey) {
@@ -142,12 +161,14 @@ export async function GET(req: NextRequest) {
       return `${year}${month}${day}`;
     };
 
-    const eventStartDate = includePast 
+    const eventStartDate = includePast
       ? formatDate(new Date(today.getFullYear(), today.getMonth() - 1, 1)) // 1개월 전부터
       : formatDate(today); // 오늘부터
     const eventEndDate = formatDate(threeMonthsLater);
 
-    const baseUrl = 'https://apis.data.go.kr/B551011/KorService2/searchFestival2';
+    // 언어에 따른 서비스명 결정
+    const serviceName = getServiceName(language);
+    const baseUrl = `https://apis.data.go.kr/B551011/${serviceName}/searchFestival2`;
     const params = new URLSearchParams({
       MobileOS: 'ETC',
       MobileApp: 'K-Docent',

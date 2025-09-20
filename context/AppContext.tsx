@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react"
 import { LocationData, Message } from "@/types"
+import { getInitialLanguage } from "@/utils/languageUtils"
 
 interface AppContextType {
   // 현재 선택된 문화재
@@ -415,7 +416,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [inputMessage, setInputMessage] = useState("")
   const [isPlaying, setIsPlaying] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState({
-    language: "ko",
+    language: getInitialLanguage(),
     level: "adult", // expert, adult, children
     interests: ["history", "architecture"],
   })

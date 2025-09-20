@@ -6,9 +6,10 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Home, Send, Mic, Globe, Users, Clock, Volume2, MapPin } from "lucide-react"
+import { Home, Send, Mic, Volume2 } from "lucide-react"
 import { AppHeader } from "@/components/Layout/AppHeader"
 import { getTranslatedText } from "@/utils/translation"
+import { useTranslation } from "@/utils/i18n"
 import type { Message, LocationData } from "@/types"
 
 const FALLBACK_LOCATION = {
@@ -32,13 +33,6 @@ const FALLBACK_LOCATION = {
   backgroundImage: "https://www.kh.or.kr/jnrepo/namo/img/images/000045/20230405103334542_MPZHA77B.jpg",
 }
 
-const SUGGESTED_QUESTIONS = [
-  "경복궁의 숨겨진 이야기가 있나요?",
-  "조선시대 왕의 하루 일과는?",
-  "경복궁에서 가장 아름다운 곳은?",
-  "궁궐 음식은 어떤 것들이 있었나요?",
-  "경복궁 관람 팁을 알려주세요",
-]
 
 const TypingIndicator = () => (
   <div className="flex justify-start">
@@ -99,17 +93,7 @@ export default function ChatScreen({
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const language = userProfile?.language ?? "ko"
-  const locationName = location
-    ? getTranslatedText(location.name, language)
-    : FALLBACK_LOCATION.name[language as keyof typeof FALLBACK_LOCATION.name] ?? FALLBACK_LOCATION.name.ko
-  const locationCategory = location
-    ? getTranslatedText(location.category, language)
-    : FALLBACK_LOCATION.category[language as keyof typeof FALLBACK_LOCATION.category] ?? FALLBACK_LOCATION.category.ko
-  const locationDistance = location?.distance ?? FALLBACK_LOCATION.distance
-  const headerSubtitle = locationCategory
-    ? `${locationCategory}${locationDistance ? ` • ${locationDistance}km` : ""}`
-    : undefined
-  const headerImage = location?.backgroundImage ?? FALLBACK_LOCATION.backgroundImage
+  const { t } = useTranslation(language)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -134,7 +118,6 @@ export default function ChatScreen({
       type: "user",
       content: message,
       timestamp: new Date(),
-      location: locationName,
     }
 
     const aiMessageId = `${Date.now()}-ai`
@@ -143,7 +126,6 @@ export default function ChatScreen({
       type: "ai",
       content: "",
       timestamp: new Date(),
-      location: locationName,
     }
 
     const historyPayload = [...messages, userMessage]
@@ -164,7 +146,7 @@ export default function ChatScreen({
         body: JSON.stringify({
           message,
           language,
-          location: locationName,
+          location: null,
           history: historyPayload,
         }),
       })
@@ -235,9 +217,6 @@ export default function ChatScreen({
     }
   }
 
-  const handleSuggestedQuestion = (question: string) => {
-    handleSendMessage(question)
-  }
 
   return (
     <div
@@ -247,20 +226,14 @@ export default function ChatScreen({
       <div className="sticky top-0 z-40 bg-white border-b shadow-sm">
         <AppHeader
           className="bg-white"
-          title={`${locationName} AI 도슨트`}
-          subtitle={headerSubtitle}
+          title={t('chat.aiDocent')}
+          subtitle="문화재와 역사에 대해 질문해보세요"
           onBack={onBackToDetail}
-          leadingContent={headerImage ? (
-            <div
-              aria-hidden
-              className="w-10 h-10 rounded-full shadow-md overflow-hidden border-2 border-white flex-shrink-0"
-              style={{
-                backgroundImage: `url(${headerImage})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            />
-          ) : null}
+          leadingContent={
+            <div className="w-10 h-10 rounded-full shadow-md overflow-hidden border-2 border-gray-200 flex-shrink-0 bg-gray-800 flex items-center justify-center">
+              <span className="text-white text-sm font-bold">AI</span>
+            </div>
+          }
           actions={[
             {
               key: "home",
@@ -274,26 +247,6 @@ export default function ChatScreen({
         />
       </div>
 
-      <div className="p-4 border-b bg-white">
-        <div className="flex items-center gap-2 mb-3">
-          <Clock className="w-4 h-4 text-gray-700" />
-          <span className="text-sm font-semibold text-gray-800">추천 질문</span>
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {SUGGESTED_QUESTIONS.map((question) => (
-            <Button
-              key={question}
-              variant="outline"
-              size="sm"
-              className="whitespace-nowrap text-xs border-gray-200 hover:border-gray-300 hover:bg-gray-50 bg-transparent text-gray-700"
-              onClick={() => handleSuggestedQuestion(question)}
-              disabled={isTyping}
-            >
-              {question}
-            </Button>
-          ))}
-        </div>
-      </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent hover:scrollbar-thumb-gray-300">
         {messages.map((message) => (
@@ -308,12 +261,6 @@ export default function ChatScreen({
                     <AvatarFallback className="bg-gray-800 text-white text-xs font-bold">AI</AvatarFallback>
                   </Avatar>
                   <span className="text-xs font-medium text-gray-800">도슨트</span>
-                  {message.location && (
-                    <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
-                      <MapPin className="w-3 h-3 mr-1" />
-                      {message.location}
-                    </Badge>
-                  )}
                 </div>
               )}
 
@@ -369,7 +316,7 @@ export default function ChatScreen({
             <Input
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder={`${locationName}에 대해 궁금한 것을 물어보세요...`}
+              placeholder={t('chat.placeholder')}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault()
