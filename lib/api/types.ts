@@ -32,6 +32,27 @@ export interface ChatResponse {
   conversation_id?: string
 }
 
+// 나레이션 생성 관련 타입
+export interface NarrationGenerateRequest {
+  language: string
+  text: string
+  site_id: number
+  content_id: number
+}
+
+export interface NarrationGenerateResponse {
+  audio_id: number
+  site_id: number
+  narration_id: number
+  target_age_group: string
+  language: string
+  file_path: string
+  duration_seconds: number
+  generation_status: string
+  created_at: string
+  updated_at: string
+}
+
 // 위치 관련 타입
 export interface Location {
   lat: number
@@ -129,6 +150,8 @@ export interface SimpleHeritageContent {
   distance_km: number
   image_url?: string
   has_tts_audio: boolean
+  narration_text?: string
+  tts_url?: string
 }
 
 export interface NearbyHeritageRequest {
@@ -138,6 +161,7 @@ export interface NearbyHeritageRequest {
   radius_km?: number
   category?: string
   limit?: number
+  age_group?: 'adult' | 'child' // 나레이션 모드
 }
 
 export interface NearbyHeritageResponse {
@@ -208,4 +232,49 @@ export interface SearchResult {
   total: number
   page: number
   per_page: number
+}
+
+// TTS URL 관련 타입
+export interface TTSUrlRequest {
+  site_id: number
+  content_id: number
+  language: string
+  age_group: 'adult' | 'child'
+}
+
+export interface TTSUrlResponse {
+  tts_url: string
+  duration_seconds: number
+  generation_status: string
+}
+
+// 어드민 관련 타입
+export interface CreateHeritageRequest {
+  name: string
+  description: string
+  latitude: number
+  longitude: number
+}
+
+export interface CreateHeritageResponse {
+  site_id: number
+  content_id: number
+  name: string
+  description: string
+  latitude: number
+  longitude: number
+  created_at: string
+}
+
+export interface BulkCreateHeritageRequest {
+  heritage_data: CreateHeritageRequest[]
+}
+
+export interface BulkCreateHeritageResponse {
+  created_count: number
+  created_items: CreateHeritageResponse[]
+  failed_items?: {
+    data: CreateHeritageRequest
+    error: string
+  }[]
 }

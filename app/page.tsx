@@ -20,6 +20,8 @@ import { LanguageModal } from "@/components/Layout/LanguageModal"
 import { NarrationButton } from "@/components/NarrationButton"
 import { NarrationRequestModal } from "@/components/NarrationRequestModal"
 import { useNearbyHeritage, useGeolocation } from "@/lib/api/hooks"
+import { narrationAPI } from "@/lib/api/client"
+import type { NarrationGenerateRequest } from "@/lib/api/types"
 import { getInitialLanguage, setStoredLanguage, validateLanguageCode } from "@/utils/languageUtils"
 import { useTranslation } from "@/utils/i18n"
 
@@ -55,14 +57,17 @@ export default function Home() {
 
   // 나레이션 관련 상태
   const [playingNarration, setPlayingNarration] = useState<number | null>(null)
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
   const [narrationRequestModal, setNarrationRequestModal] = useState<{
     isOpen: boolean
     heritageId: number
     heritageName: string
+    siteId: number
   }>({
     isOpen: false,
     heritageId: 0,
-    heritageName: ''
+    heritageName: '',
+    siteId: 0
   })
   
   // 축제 카드 확장 상태 추가
@@ -81,7 +86,8 @@ export default function Home() {
       longitude: location.lng,
       radius_km: 10.0,
       language: userProfile.language || 'ko', // 필수 파라미터
-      limit: 30
+      limit: 30,
+      age_group: narrationMode === 'children' ? 'child' : 'adult' // 나레이션 모드
     } : undefined
   )
 
@@ -156,11 +162,6 @@ export default function Home() {
     }
   }
 
-  // 문화재 카드 클릭 핸들러
-  const handleHeritageNavigate = (heritage: any) => {
-    router.push(`/detail/${heritage.content_id}`)
-  }
-
   // AI 해설사 버튼 핸들러
   const handleAIGuide = (heritage: any) => {
     // AI 해설사 기능 - 상세 페이지로 이동하여 AI 해설 시작
@@ -169,35 +170,153 @@ export default function Home() {
 
 
   // 나레이션 재생/일시정지 핸들러
-  const handleNarrationToggle = (heritageId: number) => {
-    if (playingNarration === heritageId) {
-      setPlayingNarration(null) // 일시정지
-    } else {
-      setPlayingNarration(heritageId) // 재생
+  const handleNarrationToggle = async (heritageId: number) => {
+    try {
+      // 현재 재생 중인 오디오가 같은 헤리티지인 경우 일시정지/재개
+      if (playingNarration === heritageId) {
+        if (audioElement) {
+          if (audioElement.paused) {
+            await audioElement.play()
+          } else {
+            audioElement.pause()
+            setPlayingNarration(null)
+          }
+        }
+        return
+      }
+
+      // 다른 오디오가 재생 중이면 정지
+      if (audioElement) {
+        audioElement.pause()
+        audioElement.currentTime = 0
+      }
+
+      // 현재 문화재 데이터 찾기
+      const currentHeritage = heritage?.results.find(
+        item => item.content_id === heritageId
+      )
+
+      if (!currentHeritage) {
+        alert('문화재 데이터를 찾을 수 없습니다.')
+        return
+      }
+
+      // heritage 데이터에서 직접 TTS URL 사용
+      if (currentHeritage.tts_url) {
+        // 새 오디오 엘리먼트 생성
+        const audio = new Audio(currentHeritage.tts_url)
+
+        // 오디오 이벤트 리스너 설정
+        audio.onplay = () => {
+          setPlayingNarration(heritageId)
+        }
+
+        audio.onpause = () => {
+          setPlayingNarration(null)
+        }
+
+        audio.onended = () => {
+          setPlayingNarration(null)
+          setAudioElement(null)
+        }
+
+        audio.onerror = () => {
+          alert('오디오 재생에 실패했습니다.')
+          setPlayingNarration(null)
+          setAudioElement(null)
+        }
+
+        // 오디오 재생
+        setAudioElement(audio)
+        await audio.play()
+      } else {
+        alert('오디오 URL을 찾을 수 없습니다.')
+      }
+    } catch (error) {
+      console.error('나레이션 재생 오류:', error)
+      alert('나레이션 재생에 실패했습니다.')
+      setPlayingNarration(null)
     }
   }
 
   // 나레이션 생성 요청 핸들러
-  const handleNarrationRequest = (heritageId: number, heritageName: string) => {
+  const handleNarrationRequest = (heritageId: number, heritageName: string, siteId: number) => {
     setNarrationRequestModal({
       isOpen: true,
       heritageId,
-      heritageName
+      heritageName,
+      siteId
     })
   }
 
   // 나레이션 생성 확인 핸들러
   const handleNarrationGeneration = async () => {
-    // TODO: 실제 나레이션 생성 API 호출
-    console.log('나레이션 생성 요청:', {
-      heritageId: narrationRequestModal.heritageId,
-      heritageName: narrationRequestModal.heritageName,
-      mode: narrationMode,
-      language: userProfile.language
-    })
+    try {
+      // 현재 문화재 데이터 찾기
+      const currentHeritage = heritage?.results.find(
+        item => item.content_id === narrationRequestModal.heritageId
+      )
 
-    // 임시로 2초 후 완료 처리
-    await new Promise(resolve => setTimeout(resolve, 2000))
+      if (!currentHeritage) {
+        throw new Error('문화재 데이터를 찾을 수 없습니다.')
+      }
+
+      // 나레이션 텍스트 가져오기
+      const narrationText = currentHeritage.narration_text
+
+      if (!narrationText) {
+        throw new Error('나레이션 텍스트가 없습니다.')
+      }
+
+      const request: NarrationGenerateRequest = {
+        language: userProfile.language,
+        text: narrationText,
+        site_id: currentHeritage.site_id,
+        content_id: currentHeritage.content_id
+      }
+
+      console.log('나레이션 생성 요청:', request)
+
+      const response = await narrationAPI.generate(request)
+
+      if (response.status === 'success') {
+        console.log('나레이션 생성 성공:', response.data)
+        alert(t('narration.generateSuccess'))
+
+        // 모달 닫기
+        setNarrationRequestModal({
+          isOpen: false,
+          heritageId: 0,
+          heritageName: '',
+          siteId: 0
+        })
+
+        // 생성 성공 시 문화재 데이터 새로고침하여 has_tts_audio 상태 업데이트
+        if (location) {
+          refetch({
+            latitude: location.lat,
+            longitude: location.lng,
+            radius_km: 10.0,
+            language: userProfile.language || 'ko',
+            limit: 50,
+            age_group: narrationMode === 'children' ? 'child' : 'adult'
+          })
+        }
+      } else {
+        throw new Error('나레이션 생성 실패')
+      }
+    } catch (error) {
+      console.error('나레이션 생성 오류:', error)
+      alert(t('narration.generateError'))
+    } finally {
+      // 실패한 경우에도 모달 닫기
+      setNarrationRequestModal({
+        isOpen: false,
+        heritageId: 0,
+        heritageName: '',
+        siteId: 0
+      })
+    }
   }
 
   const handleLanguageChange = (lang: string) => {
@@ -213,6 +332,30 @@ export default function Home() {
       setUserProfile((prev) => ({ ...prev, language: initialLanguage }))
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 언어 또는 나레이션 모드 변경 시 heritage 데이터 새로고침
+  useEffect(() => {
+    if (location) {
+      refetch({
+        latitude: location.lat,
+        longitude: location.lng,
+        radius_km: 10.0,
+        language: userProfile.language || 'ko',
+        limit: 30,
+        age_group: narrationMode === 'children' ? 'child' : 'adult'
+      })
+    }
+  }, [userProfile.language, narrationMode, location, refetch])
+
+  // 컴포넌트 언마운트 시 오디오 정리
+  useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause()
+        audioElement.currentTime = 0
+      }
+    }
+  }, [audioElement])
 
 
   // 나레이션 모드 옵션
@@ -368,7 +511,8 @@ export default function Home() {
                       longitude: location.lng,
                       radius_km: 10.0,
                       language: userProfile.language || 'ko',
-                      limit: 50
+                      limit: 50,
+                      age_group: narrationMode === 'children' ? 'child' : 'adult'
                     })
                   }
                 }}
@@ -401,8 +545,7 @@ export default function Home() {
               filteredHeritage.map((heritage_item) => (
                 <Card
                   key={heritage_item.content_id}
-                  className="flex-shrink-0 w-72 h-110 relative overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-primary/30 rounded-xl"
-                  onClick={() => handleHeritageNavigate(heritage_item)}
+                  className="flex-shrink-0 w-72 h-110 relative overflow-hidden hover:shadow-lg transition-all duration-300 border-2 border-transparent hover:border-primary/30 rounded-xl"
                   style={{
                     backgroundImage: heritage_item.image_url ? `url(${heritage_item.image_url})` : 'none',
                     backgroundSize: 'cover',
@@ -462,7 +605,7 @@ export default function Home() {
                           hasAudio={heritage_item.has_tts_audio}
                           isPlaying={playingNarration === heritage_item.content_id}
                           onPlayToggle={() => handleNarrationToggle(heritage_item.content_id)}
-                          onRequestGeneration={() => handleNarrationRequest(heritage_item.content_id, heritage_item.name)}
+                          onRequestGeneration={() => handleNarrationRequest(heritage_item.content_id, heritage_item.name, heritage_item.site_id)}
                           className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm border border-white/30 hover:border-white/50 py-3"
                           language={userProfile.language}
                         />

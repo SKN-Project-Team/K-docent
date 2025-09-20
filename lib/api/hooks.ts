@@ -15,7 +15,7 @@ import {
   NearbyHeritageRequest,
   NearbyHeritageResponse,
 } from './types'
-import { chatAPI, heritageAPI, poiAPI, festivalAPI, searchAPI } from './client'
+import { chatAPI, heritageAPI, poiAPI, festivalAPI, searchAPI, narrationAPI } from './client'
 import { ApiClientError, handleApiResponse, debounce, apiCache } from './utils'
 
 // 기본 API 호출 훅

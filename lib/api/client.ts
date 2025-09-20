@@ -13,7 +13,15 @@ import {
   User,
   UserPreferences,
   NearbyHeritageRequest,
-  NearbyHeritageResponse
+  NearbyHeritageResponse,
+  NarrationGenerateRequest,
+  NarrationGenerateResponse,
+  TTSUrlRequest,
+  TTSUrlResponse,
+  CreateHeritageRequest,
+  CreateHeritageResponse,
+  BulkCreateHeritageRequest,
+  BulkCreateHeritageResponse
 } from './types'
 
 // API 설정
@@ -193,6 +201,82 @@ class ApiClient {
     return this.get<NearbyHeritageResponse>('/api/v1/heritage-contents/nearby/simple', request)
   }
 
+  // ========== TTS URL API ==========
+  async getTTSUrl(request: TTSUrlRequest): Promise<ApiResponse<TTSUrlResponse>> {
+    return this.get<TTSUrlResponse>('/api/v1/tts/url', request)
+  }
+
+  // ========== 나레이션 생성 API ==========
+  async generateNarration(request: NarrationGenerateRequest): Promise<ApiResponse<NarrationGenerateResponse>> {
+    const params = new URLSearchParams()
+    Object.entries(request).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        params.append(key, String(value))
+      }
+    })
+
+    const url = `/api/v1/tts/generate-and-save?${params.toString()}`
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 60000) // 1분 타임아웃
+
+    try {
+      const defaultHeaders: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      }
+
+      const response = await fetch(`${this.baseURL}${url}`, {
+        method: 'POST',
+        headers: defaultHeaders,
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorData: ApiError = await response.json().catch(() => ({
+          detail: `HTTP ${response.status}: ${response.statusText}`,
+          status_code: response.status,
+          timestamp: new Date().toISOString(),
+        }))
+        throw new Error(JSON.stringify(errorData))
+      }
+
+      const data = await response.json()
+      return {
+        data,
+        status: 'success'
+      }
+    } catch (error) {
+      clearTimeout(timeoutId)
+
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error(JSON.stringify({
+            detail: 'Request timeout (1 minute)',
+            status_code: 408,
+            timestamp: new Date().toISOString(),
+          }))
+        }
+
+        // JSON 파싱된 에러인지 확인
+        try {
+          JSON.parse(error.message)
+          throw error
+        } catch {
+          // 일반 에러인 경우
+          throw new Error(JSON.stringify({
+            detail: error.message,
+            status_code: 500,
+            timestamp: new Date().toISOString(),
+          }))
+        }
+      }
+
+      throw error
+    }
+  }
+
   // ========== POI API ==========
   async getNearbyPOIs(request: NearbyPOIRequest): Promise<ApiResponse<POI[]>> {
     return this.get<POI[]>('/pois/nearby', request)
@@ -225,6 +309,15 @@ class ApiClient {
     return this.put<User>(`/users/${userId}/preferences`, preferences)
   }
 
+  // ========== 어드민 API ==========
+  async createHeritage(request: CreateHeritageRequest): Promise<ApiResponse<CreateHeritageResponse>> {
+    return this.post<CreateHeritageResponse>('/admin/heritage', request)
+  }
+
+  async bulkCreateHeritage(request: BulkCreateHeritageRequest): Promise<ApiResponse<BulkCreateHeritageResponse>> {
+    return this.post<BulkCreateHeritageResponse>('/admin/heritage/bulk', request)
+  }
+
   // ========== 헬스체크 ==========
   async healthCheck(): Promise<ApiResponse<{ status: string; timestamp: string }>> {
     return this.get('/health')
@@ -249,6 +342,14 @@ export const heritageAPI = {
   getNearby: (request: NearbyHeritageRequest) => apiClient.getNearbyHeritage(request),
 }
 
+export const ttsAPI = {
+  getUrl: (request: TTSUrlRequest) => apiClient.getTTSUrl(request),
+}
+
+export const narrationAPI = {
+  generate: (request: NarrationGenerateRequest) => apiClient.generateNarration(request),
+}
+
 export const poiAPI = {
   getNearby: (request: NearbyPOIRequest) => apiClient.getNearbyPOIs(request),
   getById: (id: string) => apiClient.getPOIById(id),
@@ -267,6 +368,11 @@ export const userAPI = {
   getUser: (userId: string) => apiClient.getUser(userId),
   updatePreferences: (userId: string, preferences: UserPreferences) =>
     apiClient.updateUserPreferences(userId, preferences),
+}
+
+export const adminAPI = {
+  createHeritage: (request: CreateHeritageRequest) => apiClient.createHeritage(request),
+  bulkCreateHeritage: (request: BulkCreateHeritageRequest) => apiClient.bulkCreateHeritage(request),
 }
 
 // 기본 내보내기

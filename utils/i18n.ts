@@ -135,6 +135,26 @@ export const translations: Translations = {
     de: 'Fragen Sie nach Kulturerbe oder Geschichte...',
     es: 'Pregunta sobre patrimonio cultural o historia...'
   },
+
+  // 나레이션 생성 관련
+  'narration.generateSuccess': {
+    ko: '나레이션이 성공적으로 생성되었습니다!',
+    en: 'Narration generated successfully!',
+    zh: '解说生成成功！',
+    ja: 'ナレーションが正常に生成されました！',
+    fr: 'Narration générée avec succès !',
+    de: 'Erzählung erfolgreich erstellt!',
+    es: '¡Narración generada exitosamente!'
+  },
+  'narration.generateError': {
+    ko: '나레이션 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+    en: 'An error occurred while generating narration. Please try again later.',
+    zh: '生成解说时发生错误。请稍后重试。',
+    ja: 'ナレーション生成中にエラーが発生しました。しばらくしてから再試行してください。',
+    fr: 'Une erreur s\'est produite lors de la génération de la narration. Veuillez réessayer plus tard.',
+    de: 'Bei der Generierung der Erzählung ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.',
+    es: 'Ocurrió un error al generar la narración. Por favor, inténtelo de nuevo más tarde.'
+  },
   'common.cancel': {
     ko: '취소',
     en: 'Cancel',
