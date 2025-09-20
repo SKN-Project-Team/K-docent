@@ -253,6 +253,7 @@ export interface CreateHeritageRequest {
   description: string
   latitude: number
   longitude: number
+  age_group?: 'adult' | 'child'
 }
 
 export interface CreateHeritageResponse {
@@ -276,4 +277,76 @@ export interface BulkCreateHeritageResponse {
     data: CreateHeritageRequest
     error: string
   }[]
+}
+
+// 문화재 생성 API 타입
+export interface HeritageGenerateRequest {
+  data: CreateHeritageRequest | CreateHeritageRequest[]
+  age_group: 'adult' | 'child'
+}
+
+export interface HeritageGenerateResponse {
+  generated_contents: {
+    site_id: number
+    content_id: number
+    name: string
+    description: string
+    latitude: number
+    longitude: number
+    narration_status: string
+    created_at: string
+  }[]
+  total_generated: number
+  age_group: string
+}
+
+export interface SingleHeritageGenerateRequest {
+  name: string
+  description: string
+  latitude: number
+  longitude: number
+}
+
+// 백그라운드 생성 API 타입
+export interface AsyncHeritageGenerateResponse {
+  success: boolean
+  message: string
+  job_id: string
+  status: 'processing' | 'completed' | 'failed'
+  estimated_duration: number
+  total_items: number
+}
+
+export interface JobStatusResponse {
+  job_id: string
+  status: 'processing' | 'completed' | 'failed'
+  progress: number
+  total_items: number
+  completed_items: number
+  failed_items: number
+  results: {
+    site_id: number
+    content_id: number
+    name: string
+    description: string
+    latitude: number
+    longitude: number
+    narration_status: string
+    created_at: string
+  }[]
+  created_at: string
+  updated_at: string
+  error_message?: string
+}
+
+export interface JobListResponse {
+  jobs: {
+    job_id: string
+    status: 'processing' | 'completed' | 'failed'
+    progress: number
+    total_items: number
+    created_at: string
+    updated_at: string
+  }[]
+  total_count: number
 }

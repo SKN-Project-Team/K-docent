@@ -21,7 +21,13 @@ import {
   CreateHeritageRequest,
   CreateHeritageResponse,
   BulkCreateHeritageRequest,
-  BulkCreateHeritageResponse
+  BulkCreateHeritageResponse,
+  HeritageGenerateRequest,
+  HeritageGenerateResponse,
+  SingleHeritageGenerateRequest,
+  AsyncHeritageGenerateResponse,
+  JobStatusResponse,
+  JobListResponse
 } from './types'
 
 // API 설정
@@ -265,11 +271,66 @@ class ApiClient {
 
   // ========== 어드민 API ==========
   async createHeritage(request: CreateHeritageRequest): Promise<ApiResponse<CreateHeritageResponse>> {
-    return this.post<CreateHeritageResponse>('/admin/heritage', request)
+    // age_group이 없으면 기본값으로 'adult' 설정
+    const requestWithAgeGroup = {
+      ...request,
+      age_group: request.age_group || 'adult'
+    }
+    return this.post<CreateHeritageResponse>('/admin/heritage', requestWithAgeGroup)
   }
 
   async bulkCreateHeritage(request: BulkCreateHeritageRequest): Promise<ApiResponse<BulkCreateHeritageResponse>> {
     return this.post<BulkCreateHeritageResponse>('/admin/heritage/bulk', request)
+  }
+
+  // ========== 문화재 생성 API ==========
+  // 동기 방식 (기존)
+  async generateHeritage(request: HeritageGenerateRequest): Promise<ApiResponse<HeritageGenerateResponse>> {
+    return this.post<HeritageGenerateResponse>('/api/v1/heritage-generation/generate', request)
+  }
+
+  async generateSingleHeritage(request: SingleHeritageGenerateRequest): Promise<ApiResponse<HeritageGenerateResponse>> {
+    return this.post<HeritageGenerateResponse>('/api/v1/heritage-generation/generate/single', request)
+  }
+
+  // 백그라운드 방식 (신규)
+  async generateHeritageAsync(request: HeritageGenerateRequest): Promise<ApiResponse<AsyncHeritageGenerateResponse>> {
+    return this.post<AsyncHeritageGenerateResponse>('/api/v1/heritage-generation/generate/async', request)
+  }
+
+  // 파일 업로드 - 백그라운드 방식
+  async uploadHeritageFileAsync(file: File, age_group: 'adult' | 'child' = 'adult'): Promise<ApiResponse<AsyncHeritageGenerateResponse>> {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('age_group', age_group)
+
+    return this.request<AsyncHeritageGenerateResponse>('/api/v1/heritage-generation/generate/async', {
+      method: 'POST',
+      headers: {
+        // Content-Type을 설정하지 않음 - 브라우저가 자동으로 multipart/form-data로 설정
+      },
+      body: formData,
+    })
+  }
+
+  // 작업 상태 조회
+  async getJobStatus(jobId: string): Promise<ApiResponse<JobStatusResponse>> {
+    return this.get<JobStatusResponse>(`/api/v1/heritage-generation/jobs/${jobId}/status`)
+  }
+
+  // 전체 작업 목록 조회
+  async getJobList(): Promise<ApiResponse<JobListResponse>> {
+    return this.get<JobListResponse>('/api/v1/heritage-generation/jobs')
+  }
+
+  // 작업 취소
+  async cancelJob(jobId: string): Promise<ApiResponse<{ success: boolean; message: string }>> {
+    return this.delete<{ success: boolean; message: string }>(`/api/v1/heritage-generation/jobs/${jobId}`)
+  }
+
+  // 오래된 작업 정리
+  async cleanupJobs(): Promise<ApiResponse<{ cleaned_count: number; message: string }>> {
+    return this.post<{ cleaned_count: number; message: string }>('/api/v1/heritage-generation/jobs/cleanup')
   }
 
   // ========== 헬스체크 ==========
@@ -321,6 +382,22 @@ export const userAPI = {
 export const adminAPI = {
   createHeritage: (request: CreateHeritageRequest) => apiClient.createHeritage(request),
   bulkCreateHeritage: (request: BulkCreateHeritageRequest) => apiClient.bulkCreateHeritage(request),
+}
+
+export const heritageGenerationAPI = {
+  // 동기 방식 (소규모 데이터용)
+  generate: (request: HeritageGenerateRequest) => apiClient.generateHeritage(request),
+  generateSingle: (request: SingleHeritageGenerateRequest) => apiClient.generateSingleHeritage(request),
+
+  // 백그라운드 방식 (대용량 처리용)
+  generateAsync: (request: HeritageGenerateRequest) => apiClient.generateHeritageAsync(request),
+  uploadFileAsync: (file: File, age_group: 'adult' | 'child' = 'adult') => apiClient.uploadHeritageFileAsync(file, age_group),
+
+  // 작업 관리
+  getJobStatus: (jobId: string) => apiClient.getJobStatus(jobId),
+  getJobList: () => apiClient.getJobList(),
+  cancelJob: (jobId: string) => apiClient.cancelJob(jobId),
+  cleanupJobs: () => apiClient.cleanupJobs(),
 }
 
 // 기본 내보내기
