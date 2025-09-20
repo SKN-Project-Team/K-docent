@@ -13,23 +13,22 @@ export interface ApiError {
 }
 
 // 채팅 관련 타입
-export interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-  timestamp?: string
-}
-
 export interface ChatRequest {
   message: string
-  language?: string
-  location?: string
-  history?: ChatMessage[]
+  language: string
+  age_group: string
+  session_id?: string
 }
 
 export interface ChatResponse {
-  response: string
-  sources?: string[]
-  conversation_id?: string
+  chat_id: number
+  session_id: string
+  user_message: string
+  assistant_response: string
+  language: string
+  age_group: string
+  created_at: string
+  session_started_at: string
 }
 
 // 나레이션 생성 관련 타입

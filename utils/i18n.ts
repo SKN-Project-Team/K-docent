@@ -109,13 +109,13 @@ export const translations: Translations = {
 
   // 채팅 관련
   'chat.aiDocent': {
-    ko: 'AI 도슨트',
-    en: 'AI Docent',
-    zh: 'AI导游',
-    ja: 'AIドーセント',
-    fr: 'Guide IA',
-    de: 'KI-Führer',
-    es: 'Guía IA'
+    ko: 'K-Docent',
+    en: 'K-Docent',
+    zh: 'K-Docent',
+    ja: 'K-Docent',
+    fr: 'K-Docent',
+    de: 'K-Docent',
+    es: 'K-Docent'
   },
   'chat.suggestedQuestions': {
     ko: '추천 질문',

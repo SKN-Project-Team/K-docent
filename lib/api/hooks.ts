@@ -52,64 +52,46 @@ export function useChat() {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<ApiClientError | null>(null)
-  const [streamingMessage, setStreamingMessage] = useState('')
-  const [isStreaming, setIsStreaming] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
 
   const sendMessage = useCallback(async (request: ChatRequest) => {
     setLoading(true)
     setError(null)
-    setStreamingMessage('')
-    setIsStreaming(false)
 
     // 사용자 메시지 추가
     setMessages(prev => [...prev, { role: 'user', content: request.message }])
 
     try {
-      // 스트리밍 모드
-      if (window.ReadableStream) {
-        setIsStreaming(true)
-        let fullResponse = ''
-
-        await chatAPI.streamMessage(
-          request,
-          (chunk: string) => {
-            fullResponse += chunk
-            setStreamingMessage(fullResponse)
-          },
-          (error: string) => {
-            setError(new ApiClientError(error))
-            setIsStreaming(false)
-          },
-          () => {
-            setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }])
-            setStreamingMessage('')
-            setIsStreaming(false)
-          }
-        )
-      } else {
-        // 일반 모드 (폴백)
-        const response = await chatAPI.sendMessage(request)
-        setMessages(prev => [...prev, { role: 'assistant', content: response.data.response }])
+      const payload = {
+        ...request,
+        ...(sessionId && !request.session_id ? { session_id: sessionId } : {}),
       }
+
+      const response = await chatAPI.sendMessage(payload)
+      const data = response.data
+
+      if (data?.session_id) {
+        setSessionId(data.session_id)
+      }
+
+      setMessages(prev => [...prev, { role: 'assistant', content: data.assistant_response }])
     } catch (err) {
       setError(err instanceof ApiClientError ? err : new ApiClientError(String(err)))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [sessionId])
 
   const clearMessages = useCallback(() => {
     setMessages([])
-    setStreamingMessage('')
     setError(null)
+    setSessionId(null)
   }, [])
 
   return {
     messages,
     loading,
     error,
-    streamingMessage,
-    isStreaming,
     sendMessage,
     clearMessages,
   }

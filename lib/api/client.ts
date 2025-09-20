@@ -147,53 +147,7 @@ class ApiClient {
 
   // ========== 채팅 API ==========
   async sendChatMessage(request: ChatRequest): Promise<ApiResponse<ChatResponse>> {
-    return this.post<ChatResponse>('/chat', request)
-  }
-
-  // 스트리밍 채팅 (Server-Sent Events)
-  async streamChatMessage(
-    request: ChatRequest,
-    onMessage: (chunk: string) => void,
-    onError: (error: string) => void = console.error,
-    onComplete: () => void = () => {}
-  ): Promise<void> {
-    const url = `${this.baseURL}/chat/stream`
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-        },
-        body: JSON.stringify(request),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error('Response body is not readable')
-      }
-
-      const decoder = new TextDecoder()
-
-      while (true) {
-        const { done, value } = await reader.read()
-
-        if (done) {
-          onComplete()
-          break
-        }
-
-        const chunk = decoder.decode(value, { stream: true })
-        onMessage(chunk)
-      }
-    } catch (error) {
-      onError(error instanceof Error ? error.message : String(error))
-    }
+    return this.post<ChatResponse>('/api/v1/chat/message', request)
   }
 
   // ========== 문화재 콘텐츠 API ==========
@@ -330,12 +284,6 @@ export const apiClient = new ApiClient()
 // 타입 안전성을 위한 래퍼 함수들
 export const chatAPI = {
   sendMessage: (request: ChatRequest) => apiClient.sendChatMessage(request),
-  streamMessage: (
-    request: ChatRequest,
-    onMessage: (chunk: string) => void,
-    onError?: (error: string) => void,
-    onComplete?: () => void
-  ) => apiClient.streamChatMessage(request, onMessage, onError, onComplete),
 }
 
 export const heritageAPI = {

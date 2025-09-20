@@ -53,6 +53,7 @@ export const useApp = () => {
 
 const culturalSites: LocationData[] = [
   {
+    siteId: 1001,
     name: {
       ko: "경복궁",
       ja: "景福宮",
@@ -204,6 +205,7 @@ const culturalSites: LocationData[] = [
     ]
   },
   {
+    siteId: 1002,
     name: {
       ko: "창덕궁",
       ja: "昌徳宮",
@@ -243,6 +245,7 @@ const culturalSites: LocationData[] = [
     backgroundImage: "https://www.kh.or.kr/jnrepo/namo/img/images/000045/20230405103510470_DHF3M55S.jpg",
   },
   {
+    siteId: 1003,
     name: {
       ko: "덕수궁",
       ja: "徳寿宮",
@@ -282,6 +285,7 @@ const culturalSites: LocationData[] = [
     backgroundImage: "https://www.kh.or.kr/jnrepo/namo/img/images/000046/20230414194548940_NU0YGS17.jpg",
   },
   {
+    siteId: 1004,
     name: {
       ko: "종묘",
       ja: "宗廟",
@@ -321,6 +325,7 @@ const culturalSites: LocationData[] = [
     backgroundImage: "https://royal.khs.go.kr/resource/templete/royal/img/sub/intro/img_intro_jongmyo.png",
   },
   {
+    siteId: 1005,
     name: {
       ko: "북촌한옥마을",
       ja: "北村韓屋村",
@@ -360,6 +365,7 @@ const culturalSites: LocationData[] = [
     backgroundImage: "https://korean.visitseoul.net/data/kukudocs/seoul2133/20220518/202205181617250471.jpg",
   },
   {
+    siteId: 1006,
     name: {
       ko: "인사동",
       ja: "仁寺洞",
@@ -407,10 +413,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       id: "welcome",
       type: "ai",
       content:
-        "안녕하세요! 한국문화 AI 도슨트입니다. 궁금한 문화재나 축제에 대해 질문해 주시면 차근차근 안내해 드릴게요.",
-      timestamp: new Date(),
-      location: "경복궁",
-      sources: ["문화재청", "한국관광공사"],
+        "안녕하세요! 한국문화 AI 도슨트입니다. 궁금한 것에 대해 질문해 주시면 차근차근 안내해 드릴게요.",
+      timestamp: new Date()
     },
   ])
   const [inputMessage, setInputMessage] = useState("")

@@ -17,6 +17,7 @@ export interface MultilingualText {
 }
 
 export interface LocationData {
+  siteId?: number
   name: MultilingualText
   description: MultilingualText
   coordinates: { lat: number; lng: number }

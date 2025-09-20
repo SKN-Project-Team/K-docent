@@ -3,15 +3,23 @@
 import { useApp } from "@/context/AppContext"
 import ChatScreen from "@/components/ChatScreen"
 import { useRouter } from "next/navigation"
-import { getTranslatedText } from "@/utils/translation"
 
 export default function ChatPage() {
   const router = useRouter()
-  const { messages, setMessages, inputMessage, setInputMessage, isListening, setIsListening, userProfile } = useApp()
+  const {
+    currentLocation,
+    messages,
+    setMessages,
+    inputMessage,
+    setInputMessage,
+    isListening,
+    setIsListening,
+    userProfile,
+  } = useApp()
 
   return (
     <ChatScreen
-      location={null}
+      location={currentLocation}
       messages={messages}
       setMessages={setMessages}
       inputMessage={inputMessage}

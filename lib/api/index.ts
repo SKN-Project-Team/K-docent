@@ -4,7 +4,6 @@
 export type {
   ApiResponse,
   ApiError,
-  ChatMessage,
   ChatRequest,
   ChatResponse,
   Location,

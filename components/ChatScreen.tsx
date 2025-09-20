@@ -8,29 +8,32 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Home, Send, Mic, Volume2 } from "lucide-react"
 import { AppHeader } from "@/components/Layout/AppHeader"
-import { getTranslatedText } from "@/utils/translation"
 import { useTranslation } from "@/utils/i18n"
 import type { Message, LocationData } from "@/types"
+import type { ChatResponse } from "@/lib/api/types"
 
-const FALLBACK_LOCATION = {
-  name: {
-    ko: "경복궁",
-    en: "Gyeongbokgung Palace",
-    ja: "景福宮",
-    zh: "景福宫",
-    es: "Palacio Gyeongbok",
-    fr: "Palais Gyeongbok",
-  },
-  category: {
-    ko: "궁궐",
-    en: "Palace",
-    ja: "宮殿",
-    zh: "宫殿",
-    es: "Palacio",
-    fr: "Palais",
-  },
-  distance: 1.2,
-  backgroundImage: "https://www.kh.or.kr/jnrepo/namo/img/images/000045/20230405103334542_MPZHA77B.jpg",
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "")
+const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/chat/message`
+
+const resolveLocationName = (location: LocationData | null, language: string) => {
+  if (!location) return null
+  const localized = location.name?.[language as keyof typeof location.name]
+  const fallback = location.name?.ko
+  const resolved = typeof localized === "string" && localized.trim() ? localized : fallback
+  return resolved?.trim() || null
+}
+
+const resolveLanguageCode = (value?: string) => {
+  if (!value) return "KO"
+  const normalized = value.trim().toUpperCase()
+  return normalized || "KO"
+}
+
+const resolveAgeGroup = (level?: string) => {
+  if (!level) return "ADULT"
+  const normalized = level.trim().toLowerCase()
+  if (normalized === "children" || normalized === "child") return "CHILD"
+  return "ADULT"
 }
 
 
@@ -90,6 +93,7 @@ export default function ChatScreen({
   onGoHome,
 }: ChatScreenProps) {
   const [isTyping, setIsTyping] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const language = userProfile?.language ?? "ko"
@@ -103,6 +107,10 @@ export default function ChatScreen({
     scrollToBottom()
   }, [messages, isTyping])
 
+  useEffect(() => {
+    setSessionId(null)
+  }, [location])
+
   const handleVoiceInput = () => {
     setIsListening(!isListening)
   }
@@ -110,56 +118,112 @@ export default function ChatScreen({
   const handleSendMessage = async (messageText?: string) => {
     if (isTyping) return
 
-    const message = (messageText ?? inputMessage).trim()
-    if (!message) return
+    const text = (messageText ?? inputMessage).trim()
+    if (!text) return
+
+    const locationName = resolveLocationName(location, language)
 
     const userMessage: Message = {
       id: `${Date.now()}-user`,
       type: "user",
-      content: message,
+      content: text,
       timestamp: new Date(),
+      ...(locationName ? { location: locationName } : {}),
     }
 
     const aiMessageId = `${Date.now()}-ai`
-    const aiMessage: Message = {
-      id: aiMessageId,
-      type: "ai",
-      content: "",
-      timestamp: new Date(),
+
+    const upsertAiMessage = (content: string, extra?: Partial<Message>) => {
+      setMessages((prev) => {
+        const existingIndex = prev.findIndex((msg) => msg.id === aiMessageId)
+
+        if (existingIndex >= 0) {
+          return prev.map((msg) =>
+            msg.id === aiMessageId
+              ? {
+                  ...msg,
+                  content,
+                  ...(extra ?? {}),
+                  timestamp: extra?.timestamp ?? msg.timestamp,
+                }
+              : msg,
+          )
+        }
+
+        const newMessage: Message = {
+          id: aiMessageId,
+          type: "ai",
+          content,
+          timestamp: extra?.timestamp ?? new Date(),
+          ...(locationName ? { location: locationName } : {}),
+          ...(extra ?? {}),
+        }
+
+        return [...prev, newMessage]
+      })
     }
 
-    const historyPayload = [...messages, userMessage]
-      .slice(-6)
-      .map((item) => ({
-        role: item.type === "user" ? "user" : "assistant",
-        content: item.content,
-      }))
-
-    setMessages((prev) => [...prev, userMessage, aiMessage])
+    setMessages((prev) => [...prev, userMessage])
     setInputMessage("")
     setIsTyping(true)
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message,
-          language,
-          location: null,
-          history: historyPayload,
-        }),
-      })
-
-      if (!response.ok || !response.body) {
-        throw new Error("Failed to stream response")
+      const payload = {
+        message: text,
+        language: resolveLanguageCode(language),
+        age_group: resolveAgeGroup(userProfile?.level),
+        ...(sessionId ? { session_id: sessionId } : {}),
       }
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
+      const response = await fetch(CHAT_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
 
-      let done = false
+      if (!response.ok) {
+        let errorMessage = `Failed to fetch response: ${response.status}`
+        try {
+          const errorBody = await response.json()
+          if (typeof errorBody?.detail === "string" && errorBody.detail.trim()) {
+            errorMessage = errorBody.detail.trim()
+          }
+        } catch {
+          // ignore json parse errors
+        }
+        throw new Error(errorMessage)
+      }
+
+      const contentType = response.headers.get("content-type") ?? ""
+
+      if (contentType.includes("application/json")) {
+        const data = (await response.json()) as ChatResponse
+        const assistantText = data?.assistant_response?.trim() ?? ""
+        const responseTimestamp = data?.created_at ? new Date(data.created_at) : new Date()
+
+        if (data?.session_id) {
+          setSessionId(data.session_id)
+        }
+
+        upsertAiMessage(assistantText || "죄송합니다. 답변을 가져오지 못했어요.", {
+          timestamp: responseTimestamp,
+        })
+        return
+      }
+
+      const headerSessionId = response.headers.get("x-session-id")?.trim()
+      if (headerSessionId) {
+        setSessionId(headerSessionId)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("Response body is empty")
+      }
+
+      const decoder = new TextDecoder()
       let buffer = ""
+      let done = false
       let markerSeen = false
 
       while (!done) {
@@ -175,7 +239,7 @@ export default function ChatScreen({
           }
 
           let displayText = buffer
-          let sources: string[] | null = null
+          let sources: string[] | undefined
 
           if (markerSeen) {
             const [textPart, sourcePartRaw = ""] = buffer.split("\n[SOURCES]")
@@ -184,33 +248,46 @@ export default function ChatScreen({
               .split("|")
               .map((item) => item.trim())
               .filter(Boolean)
+            if (!sources.length) {
+              sources = undefined
+            }
           }
 
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === aiMessageId
-                ? {
-                    ...msg,
-                    content: displayText,
-                    ...(sources ? { sources } : {}),
-                  }
-                : msg,
-            ),
-          )
+          upsertAiMessage(displayText, {
+            ...(sources ? { sources } : {}),
+          })
         }
       }
+
+      let finalText = buffer
+      let finalSources: string[] | undefined
+
+      if (markerSeen) {
+        const [textPart, sourcePartRaw = ""] = buffer.split("\n[SOURCES]")
+        finalText = textPart
+        finalSources = sourcePartRaw
+          .split("|")
+          .map((item) => item.trim())
+          .filter(Boolean)
+        if (!finalSources.length) {
+          finalSources = undefined
+        }
+      }
+
+      upsertAiMessage(finalText.trim() || "죄송합니다. 답변을 가져오지 못했어요.", {
+        timestamp: new Date(),
+        ...(finalSources ? { sources: finalSources } : {}),
+      })
     } catch (error) {
-      console.error("Chat streaming error", error)
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === aiMessageId
-            ? {
-                ...msg,
-                content: "죄송합니다. 답변을 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
-                sources: ["시스템"],
-              }
-            : msg,
-        ),
+      console.error("Chat response error", error)
+      upsertAiMessage(
+        error instanceof Error
+          ? error.message
+          : "죄송합니다. 답변을 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        {
+          timestamp: new Date(),
+          sources: ["시스템"],
+        },
       )
     } finally {
       setIsTyping(false)
@@ -229,11 +306,11 @@ export default function ChatScreen({
           title={t('chat.aiDocent')}
           subtitle="문화재와 역사에 대해 질문해보세요"
           onBack={onBackToDetail}
-          leadingContent={
-            <div className="w-10 h-10 rounded-full shadow-md overflow-hidden border-2 border-gray-200 flex-shrink-0 bg-gray-800 flex items-center justify-center">
-              <span className="text-white text-sm font-bold">AI</span>
-            </div>
-          }
+          // leadingContent={
+          //   <div className="w-10 h-10 rounded-full shadow-md overflow-hidden border-2 border-gray-200 flex-shrink-0 bg-gray-800 flex items-center justify-center">
+          //     <span className="text-white text-sm font-bold">AI</span>
+          //   </div>
+          // }
           actions={[
             {
               key: "home",
@@ -310,7 +387,7 @@ export default function ChatScreen({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t bg-white" style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}>
+      <div className="p-4 border-t bg-white" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
         <div className="flex gap-3">
           <div className="flex-1 relative">
             <Input
