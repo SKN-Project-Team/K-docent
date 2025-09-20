@@ -425,24 +425,28 @@ export default function Home() {
       </div>
 
       {/* 근처 공공기관 행사 정보 */}
-      <div className="px-4 py-8 mt-6" style={{background: 'linear-gradient(135deg, #E1DCCA40 0%, #E1DCCA20 100%)'}}>
+      <div className="flex-1 px-4 py-8 mt-6" style={{background: 'linear-gradient(135deg, #E1DCCA40 0%, #E1DCCA20 100%)'}}>
         <div className="mb-4">
           <h3 className="font-bold text-lg text-gray-800 mb-1">행사/체험/교육 프로그램</h3>
           <p className="text-sm text-gray-600">국가유산을 새롭게 경험해보세요.</p>
         </div>
 
-        {/* 메인 이벤트 카드 - 동적 변경 */}
+        {/* 축제 리스트 - 세로 스크롤 */}
         {isLoading ? (
-          <Card className="mb-4 overflow-hidden relative animate-pulse">
-            <div className="h-48 bg-gray-200"></div>
-            <div className="p-6">
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-6 bg-gray-200 rounded mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
-            </div>
-          </Card>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="overflow-hidden relative animate-pulse">
+                <div className="h-32 bg-gray-200"></div>
+                <div className="p-4">
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                </div>
+              </Card>
+            ))}
+          </div>
         ) : error ? (
-          <Card className="mb-4 overflow-hidden text-white relative cursor-pointer transition-all duration-500 bg-red-500">
+          <Card className="overflow-hidden text-white relative cursor-pointer transition-all duration-500 bg-red-500">
             <div className="p-6">
               <div className="text-center">
                 <h4 className="font-bold text-xl mb-2">데이터 로딩 오류</h4>
@@ -458,137 +462,124 @@ export default function Home() {
             </div>
           </Card>
         ) : festivals.length > 0 ? (
-          <Card 
-            className={`mb-4 overflow-hidden text-white relative cursor-pointer transition-all duration-500 ${
-              expandedFestival === festivals[selectedFestival].id ? 'shadow-2xl' : 'hover:shadow-lg'
-            }`}
-            onClick={() => setExpandedFestival(festivals[selectedFestival].id === expandedFestival ? null : festivals[selectedFestival].id)}
-            style={{
-              backgroundImage: formatFestivalForDisplay(festivals[selectedFestival]).img ? `url(${formatFestivalForDisplay(festivals[selectedFestival]).img})` : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              minHeight: expandedFestival === festivals[selectedFestival].id ? '400px' : '200px'
-            }}
-          >
-            {/* 배경 이미지를 어둡게 처리하는 강한 오버레이 */}
-            <div className={`absolute inset-0 ${
-              formatFestivalForDisplay(festivals[selectedFestival]).img 
-                ? 'bg-black/70' 
-                : formatFestivalForDisplay(festivals[selectedFestival]).bgColor
-            } transition-all duration-300`}></div>
-            
-            <div className="relative p-6 h-full text-white z-10 flex flex-col">
-              {/* 닫기 버튼 (확장된 상태에서만 표시) */}
-              {expandedFestival === festivals[selectedFestival].id && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute top-4 right-4 p-2 h-auto hover:bg-white/20 rounded-full transition-colors z-20"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setExpandedFestival(null)
-                  }}
-                >
-                  <X className="w-5 h-5 text-white" />
-                </Button>
-              )}
-
-              {/* 기본 카드 내용 */}
-              <div className="flex items-start justify-between mb-4">
-                <Badge variant="secondary" className="bg-white/90 text-gray-800 shadow-sm backdrop-blur-sm">
-                  진행중
-                </Badge>
-                <div className="text-xs text-white/80">
-                  {selectedFestival + 1} / {festivals.length}
-                </div>
-              </div>
-
-              <div className="flex-1 flex flex-col justify-end">
-                <h4 className="font-bold text-xl mb-2">
-                  {formatFestivalForDisplay(festivals[selectedFestival]).title}
-                </h4>
-                <p className="text-sm text-white/90 mb-3">
-                  {formatFestivalForDisplay(festivals[selectedFestival]).description}
-                </p>
-
-                {/* 확장된 상태에서 추가 정보 표시 */}
-                {expandedFestival === festivals[selectedFestival].id && (
-                  <div className="mt-8 space-y-3 animate-in slide-in-from-bottom-4 duration-300">
-                    <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 space-y-3">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="w-4 h-4" />
-                        <span>{formatFestivalForDisplay(festivals[selectedFestival]).date}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <MapPin className="w-4 h-4" />
-                        <span>{formatFestivalForDisplay(festivals[selectedFestival]).place}</span>
-                      </div>
-                      {festivals[selectedFestival].phone && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Phone className="w-4 h-4" />
-                          <span>{festivals[selectedFestival].phone}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button
-                        className="flex-1 bg-white/20 hover:bg-white/30 text-white font-medium py-3 rounded-lg shadow-lg transition-all duration-200 backdrop-blur-sm border border-white/30 hover:border-white/50"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          // 상세 페이지로 이동 또는 추가 액션
-                        }}
-                      >
-                        자세히 보기
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="flex-1 bg-transparent hover:bg-white/10 text-white font-medium py-3 rounded-lg shadow-lg transition-all duration-200 backdrop-blur-sm border border-white/50 hover:border-white/70"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          // 지도에서 보기 또는 위치 정보
-                        }}
-                      >
-                        위치 보기
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 기본 상태에서의 간단한 정보 */}
-                {expandedFestival !== festivals[selectedFestival].id && (
-                  <div className="flex items-center justify-between text-xs text-white/80 mt-2">
-                    <span>{formatFestivalForDisplay(festivals[selectedFestival]).date}</span>
-                    <span>{formatFestivalForDisplay(festivals[selectedFestival]).place}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <Card className="mb-4 overflow-hidden text-white relative bg-gradient-to-br from-gray-400 to-gray-500">
-            <div className="p-6 text-center">
-              <h4 className="font-bold text-xl mb-2">축제 정보 없음</h4>
-              <p className="text-white/90 text-sm">현재 진행중인 축제가 없습니다.</p>
-            </div>
-          </Card>
-        )}
-
-        {/* 축제 네비게이션 점들 */}
-        {festivals.length > 1 && (
-          <div className="flex justify-center gap-2 mb-4">
-            {festivals.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setSelectedFestival(idx)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  idx === selectedFestival 
-                    ? "bg-primary w-6" 
-                    : "bg-gray-300 hover:bg-gray-400"
+          <div className="space-y-4 h-full overflow-y-auto">
+            {festivals.map((festival, index) => (
+              <Card 
+                key={festival.id}
+                className={`overflow-hidden text-white relative cursor-pointer transition-all duration-500 ${
+                  expandedFestival === festival.id ? 'shadow-2xl' : 'hover:shadow-lg'
                 }`}
-              />
+                onClick={() => setExpandedFestival(festival.id === expandedFestival ? null : festival.id)}
+                style={{
+                  backgroundImage: formatFestivalForDisplay(festival).img ? `url(${formatFestivalForDisplay(festival).img})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  minHeight: expandedFestival === festival.id ? '300px' : '120px'
+                }}
+              >
+                {/* 배경 이미지를 어둡게 처리하는 강한 오버레이 */}
+                <div className={`absolute inset-0 ${
+                  formatFestivalForDisplay(festival).img 
+                    ? 'bg-black/70' 
+                    : formatFestivalForDisplay(festival).bgColor
+                } transition-all duration-300`}></div>
+                
+                <div className="relative p-4 h-full text-white z-10 flex flex-col">
+                  {/* 닫기 버튼 (확장된 상태에서만 표시) */}
+                  {expandedFestival === festival.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2 p-2 h-auto hover:bg-white/20 rounded-full transition-colors z-20"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setExpandedFestival(null)
+                      }}
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </Button>
+                  )}
+
+                  {/* 기본 카드 내용 */}
+                  <div className="flex items-start justify-between mb-2">
+                    <Badge variant="secondary" className="bg-white/90 text-gray-800 shadow-sm backdrop-blur-sm text-xs">
+                      진행중
+                    </Badge>
+                  </div>
+
+                  <div className="flex-1 flex flex-col justify-end">
+                    <h4 className="font-bold text-lg mb-1">
+                      {formatFestivalForDisplay(festival).title}
+                    </h4>
+                    <p className="text-sm text-white/90 mb-2 line-clamp-2">
+                      {formatFestivalForDisplay(festival).description}
+                    </p>
+
+                    {/* 확장된 상태에서 추가 정보 표시 */}
+                    {expandedFestival === festival.id && (
+                      <div className="mt-4 space-y-3 animate-in slide-in-from-bottom-4 duration-300">
+                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 space-y-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="w-4 h-4" />
+                            <span>{formatFestivalForDisplay(festival).date}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="w-4 h-4" />
+                            <span>{formatFestivalForDisplay(festival).place}</span>
+                          </div>
+                          {festival.phone && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Phone className="w-4 h-4" />
+                              <span>{festival.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Button
+                            className="flex-1 bg-white/20 hover:bg-white/30 text-white font-medium py-2 rounded-lg shadow-lg transition-all duration-200 backdrop-blur-sm border border-white/30 hover:border-white/50 text-sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              // 상세 페이지로 이동 또는 추가 액션
+                            }}
+                          >
+                            자세히 보기
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="flex-1 bg-transparent hover:bg-white/10 text-white font-medium py-2 rounded-lg shadow-lg transition-all duration-200 backdrop-blur-sm border border-white/50 hover:border-white/70 text-sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              // 지도에서 보기 또는 위치 정보
+                            }}
+                          >
+                            위치 보기
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 기본 상태에서의 간단한 정보 */}
+                    {expandedFestival !== festival.id && (
+                      <div className="flex items-center justify-between text-xs text-white/80 mt-1">
+                        <span>{formatFestivalForDisplay(festival).date}</span>
+                        <span className="truncate ml-2">{formatFestivalForDisplay(festival).place}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
             ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <Card className="overflow-hidden text-white relative bg-gradient-to-br from-gray-400 to-gray-500">
+              <div className="p-6 text-center">
+                <h4 className="font-bold text-xl mb-2">축제 정보 없음</h4>
+                <p className="text-white/90 text-sm">현재 진행중인 축제가 없습니다.</p>
+              </div>
+            </Card>
           </div>
         )}
 
