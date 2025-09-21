@@ -53,7 +53,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("")
 
   // 나레이션 모드 상태 추가
-  const [narrationMode, setNarrationMode] = useState("children")
+  const [narrationMode, setNarrationMode] = useState<'adult' | 'children'>("adult")
 
   // 나레이션 관련 상태
   const [playingNarration, setPlayingNarration] = useState<number | null>(null)
@@ -87,7 +87,7 @@ export default function Home() {
       radius_km: 10.0,
       language: userProfile.language || 'ko', // 필수 파라미터
       limit: 30,
-      age_group: narrationMode === 'children' ? 'child' : 'adult' // 나레이션 모드
+      narrationMode: narrationMode === 'children' ? 'child' : 'adult' // 나레이션 모드
     } : undefined
   )
 
@@ -299,7 +299,7 @@ export default function Home() {
             radius_km: 10.0,
             language: userProfile.language || 'ko',
             limit: 50,
-            age_group: narrationMode === 'children' ? 'child' : 'adult'
+            narrationMode: narrationMode === 'children' ? 'child' : 'adult'
           })
         }
       } else {
@@ -342,7 +342,7 @@ export default function Home() {
         radius_km: 10.0,
         language: userProfile.language || 'ko',
         limit: 30,
-        age_group: narrationMode === 'children' ? 'child' : 'adult'
+        narrationMode: narrationMode === 'children' ? 'child' : 'adult'
       })
     }
   }, [userProfile.language, narrationMode, location, refetch])
@@ -512,7 +512,7 @@ export default function Home() {
                       radius_km: 10.0,
                       language: userProfile.language || 'ko',
                       limit: 50,
-                      age_group: narrationMode === 'children' ? 'child' : 'adult'
+                      narrationMode: narrationMode === 'children' ? 'child' : 'adult'
                     })
                   }
                 }}

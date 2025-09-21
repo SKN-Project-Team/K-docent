@@ -203,7 +203,7 @@ export const translations: Translations = {
     es: 'Modo Niños'
   },
   'narration.adultMode': {
-    ko: '어른 모드',
+    ko: '성인 모드',
     en: 'Adult Mode',
     zh: '成人模式',
     ja: '大人モード',

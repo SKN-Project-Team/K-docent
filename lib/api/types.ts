@@ -160,7 +160,7 @@ export interface NearbyHeritageRequest {
   radius_km?: number
   category?: string
   limit?: number
-  age_group?: 'adult' | 'child' // 나레이션 모드
+  narrationMode?: 'adult' | 'child' // 나레이션 모드
 }
 
 export interface NearbyHeritageResponse {
