@@ -5,6 +5,7 @@ export interface Message {
   timestamp: Date
   location?: string
   sources?: string[]
+  metadata?: Record<string, unknown>
 }
 
 export interface MultilingualText {

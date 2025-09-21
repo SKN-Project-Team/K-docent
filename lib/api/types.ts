@@ -21,14 +21,17 @@ export interface ChatRequest {
 }
 
 export interface ChatResponse {
-  chat_id: number
-  session_id: string
-  user_message: string
-  assistant_response: string
-  language: string
-  age_group: string
-  created_at: string
-  session_started_at: string
+  chat_id?: number
+  session_id?: string
+  conversation_id?: string
+  user_message?: string
+  assistant_response?: string
+  response?: string
+  language?: string
+  age_group?: string
+  created_at?: string
+  session_started_at?: string
+  sources?: string[]
 }
 
 // 나레이션 생성 관련 타입
@@ -37,7 +40,6 @@ export interface NarrationGenerateRequest {
   text: string
   site_id: number
   content_id: number
-  age_group: 'adult' | 'child'
 }
 
 export interface NarrationGenerateResponse {
@@ -161,7 +163,7 @@ export interface NearbyHeritageRequest {
   radius_km?: number
   category?: string
   limit?: number
-  narrationMode?: 'adult' | 'child' // 나레이션 모드
+  age_group?: 'adult' | 'child' // 나레이션 모드
 }
 
 export interface NearbyHeritageResponse {

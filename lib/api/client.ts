@@ -153,7 +153,7 @@ class ApiClient {
 
   // ========== 채팅 API ==========
   async sendChatMessage(request: ChatRequest): Promise<ApiResponse<ChatResponse>> {
-    return this.post<ChatResponse>('/api/v1/chat/message', request)
+    return this.post<ChatResponse>('/api/v1/chat', request)
   }
 
   // ========== 문화재 콘텐츠 API ==========

@@ -70,11 +70,18 @@ export function useChat() {
       const response = await chatAPI.sendMessage(payload)
       const data = response.data
 
-      if (data?.session_id) {
-        setSessionId(data.session_id)
+      const sessionIdentifier = (data?.session_id ?? data?.conversation_id)?.trim()
+      if (sessionIdentifier) {
+        setSessionId(sessionIdentifier)
       }
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.assistant_response }])
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: data?.assistant_response ?? data?.response ?? '',
+        },
+      ])
     } catch (err) {
       setError(err instanceof ApiClientError ? err : new ApiClientError(String(err)))
     } finally {

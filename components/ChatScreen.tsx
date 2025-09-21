@@ -13,7 +13,7 @@ import type { Message, LocationData } from "@/types"
 import type { ChatResponse } from "@/lib/api/types"
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "")
-const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/chat/message`
+const CHAT_ENDPOINT = `${API_BASE_URL}/api/v1/chat`
 
 const resolveLocationName = (location: LocationData | null, language: string) => {
   if (!location) return null
@@ -24,18 +24,17 @@ const resolveLocationName = (location: LocationData | null, language: string) =>
 }
 
 const resolveLanguageCode = (value?: string) => {
-  if (!value) return "KO"
-  const normalized = value.trim().toUpperCase()
-  return normalized || "KO"
+  if (!value) return "ko"
+  const normalized = value.trim().toLowerCase()
+  return normalized || "ko"
 }
 
 const resolveAgeGroup = (level?: string) => {
-  if (!level) return "ADULT"
+  if (!level) return "adult"
   const normalized = level.trim().toLowerCase()
-  if (normalized === "children" || normalized === "child") return "CHILD"
-  return "ADULT"
+  if (normalized === "children" || normalized === "child") return "child"
+  return "adult"
 }
-
 
 const TypingIndicator = () => (
   <div className="flex justify-start">
@@ -198,15 +197,21 @@ export default function ChatScreen({
 
       if (contentType.includes("application/json")) {
         const data = (await response.json()) as ChatResponse
-        const assistantText = data?.assistant_response?.trim() ?? ""
+        const assistantText =
+          data?.assistant_response?.trim() ?? data?.response?.trim() ?? ""
         const responseTimestamp = data?.created_at ? new Date(data.created_at) : new Date()
+        const normalizedSources = Array.isArray(data?.sources)
+          ? data.sources.filter((source): source is string => typeof source === "string" && Boolean(source.trim()))
+          : undefined
+        const sessionIdentifier = (data?.session_id ?? data?.conversation_id)?.trim()
 
-        if (data?.session_id) {
-          setSessionId(data.session_id)
+        if (sessionIdentifier) {
+          setSessionId(sessionIdentifier)
         }
 
         upsertAiMessage(assistantText || "죄송합니다. 답변을 가져오지 못했어요.", {
           timestamp: responseTimestamp,
+          ...(normalizedSources ? { sources: normalizedSources } : {}),
         })
         return
       }
@@ -326,62 +331,65 @@ export default function ChatScreen({
 
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent hover:scrollbar-thumb-gray-300">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.type === "user" ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-4 duration-300`}
-          >
-            <div className={`max-w-[80%] ${message.type === "user" ? "order-2" : "order-1"}`}>
-              {message.type === "ai" && (
-                <div className="flex items-center gap-2 mb-2">
-                  <Avatar className="w-7 h-7 bg-gray-800 shadow-md">
-                    <AvatarFallback className="bg-gray-800 text-white text-xs font-bold">AI</AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs font-medium text-gray-800">도슨트</span>
-                </div>
-              )}
-
-              <Card
-                className={`p-4 shadow-md ${
-                  message.type === "user"
-                    ? "bg-gray-900 text-white ml-auto border-gray-900"
-                    : "bg-white border-gray-200"
-                }`}
-              >
-                <p className="text-sm leading-relaxed whitespace-pre-line">{message.content}</p>
-
-                {message.sources && message.sources.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <div className="flex items-center gap-1 text-xs text-gray-600 mb-2">
-                      <span className="font-medium">참고자료</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {message.sources.map((source) => (
-                        <Badge key={source} variant="outline" className="text-xs border-gray-200 text-gray-700">
-                          {source}
-                        </Badge>
-                      ))}
-                    </div>
+        {messages.map((message) => {
+          return (
+            <div
+              key={message.id}
+              className={`flex ${message.type === "user" ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-4 duration-300`}
+            >
+              <div className={`max-w-[80%] ${message.type === "user" ? "order-2" : "order-1"}`}>
+                {message.type === "ai" && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <Avatar className="w-7 h-7 bg-gray-800 shadow-md">
+                      <AvatarFallback className="bg-gray-800 text-white text-xs font-bold">AI</AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs font-medium text-gray-800">도슨트</span>
                   </div>
                 )}
-              </Card>
 
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-gray-500">
-                  {message.timestamp.toLocaleTimeString("ko-KR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-                {message.type === "ai" && (
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100">
-                    <Volume2 className="w-3 h-3 text-gray-600" />
-                  </Button>
-                )}
+                <Card
+                  className={`p-4 shadow-md ${
+                    message.type === "user"
+                      ? "bg-gray-900 text-white ml-auto border-gray-900"
+                      : "bg-white border-gray-200"
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed whitespace-pre-line">{message.content}</p>
+
+                  {message.sources && message.sources.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="flex items-center gap-1 text-xs text-gray-600 mb-2">
+                        <span className="font-medium">참고자료</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {message.sources.map((source) => (
+                          <Badge key={source} variant="outline" className="text-xs border-gray-200 text-gray-700">
+                            {source}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                </Card>
+
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-gray-500">
+                    {message.timestamp.toLocaleTimeString("ko-KR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  {message.type === "ai" && (
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100">
+                      <Volume2 className="w-3 h-3 text-gray-600" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
 
         {isTyping && <TypingIndicator />}
         <div ref={messagesEndRef} />
