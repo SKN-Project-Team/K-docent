@@ -272,7 +272,8 @@ export default function Home() {
         language: userProfile.language,
         text: narrationText,
         site_id: currentHeritage.site_id,
-        content_id: currentHeritage.content_id
+        content_id: currentHeritage.content_id,
+        age_group: narrationMode === 'children' ? 'child' : 'adult'
       }
 
       console.log('나레이션 생성 요청:', request)

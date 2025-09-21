@@ -37,6 +37,7 @@ export interface NarrationGenerateRequest {
   text: string
   site_id: number
   content_id: number
+  age_group: 'adult' | 'child'
 }
 
 export interface NarrationGenerateResponse {
